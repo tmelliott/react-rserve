@@ -3,7 +3,6 @@
 > An Rserve interface for react
 
 [![npm version](https://badge.fury.io/js/@tmelliott%2Freact-rserve.svg)](https://badge.fury.io/js/@tmelliott%2Freact-rserve)
-[![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
 ## Install
 
