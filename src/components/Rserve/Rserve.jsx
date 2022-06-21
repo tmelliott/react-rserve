@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react'
 
-import { RSClient } from './lib-rserve'
-
 const RC = React.createContext(null)
 
 const RserveProvider = ({ value, children }) => {
     const [r, setR] = React.useState(RC)
+
+    const RSclient = require('./lib-rserve')
 
     useEffect(() => {
         if (!value.host) return
@@ -15,7 +15,7 @@ const RserveProvider = ({ value, children }) => {
                 ...value,
                 on_connect: () => setR(s)
             }
-            let s = RSClient.create({ ...args })
+            let s = RSclient.create({ ...args })
         } catch (e) {
             setR(null)
             console.log(e)

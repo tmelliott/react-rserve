@@ -1,4 +1,4 @@
-const RSClient = (function () {
+let RSclient = (function () {
   var Rserve = {};
 
   var _ = require("underscore");
@@ -1753,4 +1753,4 @@ const RSClient = (function () {
   return Rserve;
 })();
 
-module.exports = { RSClient };
+module.exports = RSclient;

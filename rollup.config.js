@@ -31,4 +31,15 @@ export default [
       terser(),
     ],
   },
+  {
+    input: "./src/components/Rserve/lib-rserve.js",
+    output: [
+      {
+        file: "dist/lib-rserve.js",
+        format: "cjs",
+        strict: false,
+      },
+    ],
+    plugins: [terser()],
+  },
 ];
