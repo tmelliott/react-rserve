@@ -2,7 +2,7 @@
 
 > An Rserve interface for react
 
-[![NPM](https://img.shields.io/npm/v/react-rserve.svg)](https://www.npmjs.com/package/@tmelliott/react-rserve)
+[![npm version](https://badge.fury.io/js/@tmelliott%2Freact-rserve.svg)](https://badge.fury.io/js/@tmelliott%2Freact-rserve)
 [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
 ## Install
