@@ -6,7 +6,7 @@ if (is.na(port)) port <- 8081
 message("Connected to PORT:", port)
 
 Rserve::run.Rserve(
-    debug = FALSE,
+    debug = TRUE,
     websockets.port = port,
     args = NULL,
     config.file = "rserve.conf"
