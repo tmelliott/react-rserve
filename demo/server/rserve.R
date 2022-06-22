@@ -5,6 +5,7 @@ if (port == "") port <- "8081"
 
 Rserve::run.Rserve(
     debug = FALSE,
+    port = port,
     args = NULL,
     config.file = "rserve.conf"
 )
