@@ -12,7 +12,7 @@ wrap.r.fun <- Rserve:::ocap
 give.first.functions <- function()
 {
     list(
-        rversion = wrap.r.fun(function() getRversion() |> as.character())
+        rversion = wrap.r.fun(function() as.character(getRversion()))
     )
 }
 
