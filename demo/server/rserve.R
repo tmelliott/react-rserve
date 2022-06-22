@@ -7,7 +7,7 @@ message("Connected to PORT:", port)
 
 Rserve::run.Rserve(
     debug = FALSE,
-    port = port,
+    websockets.port = port,
     args = NULL,
     config.file = "rserve.conf"
 )
