@@ -1,7 +1,7 @@
 source('init.R')
 
-port <- Sys.getenv("PORT")
-if (port == "") port <- "8081"
+port <- as.integer(Sys.getenv("PORT"))
+if (is.na(port)) port <- 8081
 
 message("Connected to PORT:", port)
 
