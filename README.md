@@ -12,10 +12,10 @@ npm install --save @tmelliott/react-rserve
 
 ## Usage
 
-In the outer-most component, use the `Rserve` wrapper. This will typically be in `index.jsx` or `index.tsx`.
+In the outer-most component, use the `Rserve` wrapper. This will typically be in `index.jsx`, for example:
 
 ```tsx
-// index.tsx
+// index.jsx
 import React from "react";
 import ReactDOM from "react-dom";
 import { Rserve } from "@tmelliott/react-rserve";
@@ -32,7 +32,7 @@ ReactDOM.render(
 Then use the `useRserve()` hook in any components that need to use R:
 
 ```tsx
-// App.tsx
+// App.jsx
 import React from "react";
 import { useRserve } from "@tmelliott/react-rserve";
 
