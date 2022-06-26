@@ -2,6 +2,8 @@
   "name": "@tmelliott/react-rserve",
   "version": "0.1.0",
   "description": "An interface for Rserve in react-js apps",
+  "homepage": "https://github.com/tmelliott/react-rserve",
+  "bugs": "https://github.com/tmelliott/react-rserve/issues",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "scripts": {
