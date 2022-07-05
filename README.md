@@ -37,7 +37,7 @@ import React from "react";
 import { useRserve } from "@tmelliott/react-rserve";
 
 const App = () => {
-  const R = useRserve();
+  const { R } = useRserve();
   const [fns, setFns] = React.useState([]);
 
   if (R.running) {

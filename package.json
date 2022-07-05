@@ -1,6 +1,6 @@
 {
   "name": "@tmelliott/react-rserve",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An interface for Rserve in react-js apps",
   "homepage": "https://github.com/tmelliott/react-rserve",
   "bugs": "https://github.com/tmelliott/react-rserve/issues",
@@ -10,7 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "storybook": "npm run server && start-storybook -p 6006",
     "build-storybook": "build-storybook",
-    "server": "Rscript demo/server/start.R",
+    "server": "cd demo/server && Rscript start.R",
     "build-library": "rollup -c"
   },
   "keywords": [
