@@ -37,14 +37,15 @@ import React from "react";
 import { useRserve } from "@tmelliott/react-rserve";
 
 const App = () => {
-  const { R } = useRserve();
+  // connecting is `true` if a connection attempt is underway, otherwise it is `false`
+  const { R, connecting } = useRserve();
   const [fns, setFns] = React.useState([]);
 
   if (R.running) {
     R.ocap((err, funs) => setFns(funs));
   }
 
-  return <div>...</div>;
+  return <div>{connecting ? "Connecting to R ..." : "..."}</div>;
 };
 
 export default App;
