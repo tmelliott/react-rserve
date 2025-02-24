@@ -1,50 +1,84 @@
-# React + TypeScript + Vite
+**react-rserve**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React library that provides utilities for connecting to and using Rserve.
 
-Currently, two official plugins are available:
+## TODO:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- set up ci
+- set up changesets
 
-## Expanding the ESLint configuration
+## Example usage
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+1. Create Rserve hooks:
 
-- Configure the top-level `parserOptions` property like this:
+```tsx
+// utils/rserve.ts
+import { createRserveHooks } from "react-rserve";
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+// generated using the `ts` R package: github.com/tmelliott/ts
+import app from "../path/to/app.ts";
+
+export const rserve = createRserveHooks(app);
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+2. Set up the provider:
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+```tsx
+// App.tsx
+import { RserveClient } from "react-rserve";
+import DemoComponent from "./DemoComponent";
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+export default function App() {
+  return (
+    <RserveClient host="localhost:6311">
+      <div>
+        <h1>React Rserve</h1>
+        <DemoComponent />
+      </div>
+    </RserveClient>
+  );
+}
+```
+
+3. Use the app in components:
+
+```tsx
+// DemoComponent.tsx
+import { rserve } from "./utils/rserve";
+
+export default function DemoComponent() {
+  const { result, loading, error } = rserve.useOcap("hello", "world");
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p>Error: {error.message}</p>;
+  }
+
+  return <p>{result}</p>; // "Hello, world!"
+}
+```
+
+## Other examples
+
+Any ocaps that return new ocaps will return new hooks:
+
+```tsx
+function MultipleHooks() {
+  const { result: intro, loading: loadingIntro } = rserve.useOcap(
+    "intro",
+    "world",
+  );
+
+  // I don't know if this will work, lol
+  const { result: message, loading: loadingMessage } = intro.useOcap("print");
+
+  return (
+    <div>
+      <p>{message ?? "Loading ..."}</p>
+    </div>
+  );
+}
 ```
