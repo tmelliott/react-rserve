@@ -32,7 +32,12 @@ export function useOcap<T>(ocap?: () => Promise<T>) {
     | {
         result: undefined;
         loading: true;
-        error: string | undefined;
+        error: undefined;
+      }
+    | {
+        result: undefined;
+        loading: false;
+        error: string;
       }
     | {
         result: T;

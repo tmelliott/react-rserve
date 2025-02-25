@@ -76,7 +76,7 @@ function AnotherComponent() {
     return <p>Loading...</p>;
   }
 
-  if (error) {
+  if (error !== undefined) {
     return <p>Error: {error}</p>;
   }
 
@@ -92,7 +92,7 @@ function SubComponent({ features }: { features: AnotherFunResult }) {
     return <p>Loading...</p>;
   }
 
-  if (error) {
+  if (error !== undefined) {
     return <p>Error: {error}</p>;
   }
 
