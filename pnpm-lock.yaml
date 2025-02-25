@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      rserve-ts:
+        specifier: ^0.6.2
+        version: 0.6.2
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: ^0.17.4
@@ -1330,6 +1334,9 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
+  rserve-ts@0.6.2:
+    resolution: {integrity: sha512-h1VhBK7uZPPOnCFi/jF/xjTolB1LA19YLWYoWDTUajL5fjWOJVJlQJCU/o6AUs9KcEsoSBpzw4qb3D5854EFKg==}
+
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
 
@@ -1458,6 +1465,9 @@ packages:
   ufo@1.5.4:
     resolution: {integrity: sha512-UsUk3byDzKd04EyoZ7U4DOlxQaD14JUKQl6/P7wiX4FNvUfm3XL246n9W5AmqwW5RSFJ27NAuM0iLscAOYUiGQ==}
 
+  underscore@1.13.7:
+    resolution: {integrity: sha512-GMXzWtsc57XAtguZgaQViUOzs0KTkk8ojr3/xAxXLITqf/3EMwxC0inyETfDFjH/Krbhuep0HNbbjI9i/q3F3g==}
+
   undici-types@6.20.0:
     resolution: {integrity: sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==}
 
@@ -1572,6 +1582,9 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  zod@3.24.2:
+    resolution: {integrity: sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==}
 
 snapshots:
 
@@ -2851,6 +2864,11 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.34.8
       fsevents: 2.3.3
 
+  rserve-ts@0.6.2:
+    dependencies:
+      underscore: 1.13.7
+      zod: 3.24.2
+
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
@@ -2958,6 +2976,8 @@ snapshots:
 
   ufo@1.5.4: {}
 
+  underscore@1.13.7: {}
+
   undici-types@6.20.0: {}
 
   unicode-emoji-modifier-base@1.0.0: {}
@@ -3043,3 +3063,5 @@ snapshots:
       yargs-parser: 20.2.9
 
   yocto-queue@0.1.0: {}
+
+  zod@3.24.2: {}

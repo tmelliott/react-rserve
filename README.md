@@ -47,38 +47,59 @@ export default function App() {
 import { rserve } from "./utils/rserve";
 
 export default function DemoComponent() {
-  const { result, loading, error } = rserve.useOcap("hello", "world");
+  const { app } = useRserve();
+  const { result, loading, error } = useOcap(app.fun);
 
   if (loading) {
     return <p>Loading...</p>;
   }
 
   if (error) {
-    return <p>Error: {error.message}</p>;
+    return <p>Error: {error}</p>;
   }
 
   return <p>{result}</p>; // "Hello, world!"
 }
 ```
 
-## Other examples
-
-Any ocaps that return new ocaps will return new hooks:
+If an Ocap returns more Ocaps, you need to use conditional components.
 
 ```tsx
-function MultipleHooks() {
-  const { result: intro, loading: loadingIntro } = rserve.useOcap(
-    "intro",
-    "world",
-  );
+import type { App } from "../path/to/app.ts";
 
-  // I don't know if this will work, lol
-  const { result: message, loading: loadingMessage } = intro.useOcap("print");
+// AnotherComponent.tsx
+function AnotherComponent() {
+  const { app } = useRserve();
+  const { result, loading } = useOcap(app.anotherFun);
 
-  return (
-    <div>
-      <p>{message ?? "Loading ..."}</p>
-    </div>
-  );
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p>Error: {error}</p>;
+  }
+
+  return <SubComponent ocap={result.secondaryFunction} />;
+}
+
+type AnotherFunResult = Awaited<ReturnType<App.anotherFun>>;
+
+function SubComponent({
+  ocap,
+}: {
+  ocap: AnotherFunResult["secondaryFunction"];
+}) {
+  const { result, loading, error } = useOcap(ocap);
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p>Error: {error}</p>;
+  }
+
+  return <p>{result}</p>;
 }
 ```

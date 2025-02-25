@@ -1,1 +1,1 @@
-export { Button } from "./components/Button";
+export { useOcap } from "./hooks/useOcap";
