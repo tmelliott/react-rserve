@@ -80,17 +80,13 @@ function AnotherComponent() {
     return <p>Error: {error}</p>;
   }
 
-  return <SubComponent ocap={result.secondaryFunction} />;
+  return <SubComponent ocap={result} />;
 }
 
 type AnotherFunResult = Awaited<ReturnType<App.anotherFun>>;
 
-function SubComponent({
-  ocap,
-}: {
-  ocap: AnotherFunResult["secondaryFunction"];
-}) {
-  const { result, loading, error } = useOcap(ocap);
+function SubComponent({ features }: { features: AnotherFunResult }) {
+  const { result, loading, error } = useOcap(features.secondaryFunction);
 
   if (loading) {
     return <p>Loading...</p>;
