@@ -3,8 +3,12 @@ import { createRoot } from "react-dom/client";
 
 import App from "./App.tsx";
 
+import { RserveProvider } from "./utils/rserve";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <RserveProvider>
+      <App />
+    </RserveProvider>
   </StrictMode>
 );

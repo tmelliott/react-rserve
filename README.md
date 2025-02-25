@@ -9,33 +9,38 @@ A React library that provides utilities for connecting to and using Rserve.
 
 ## Example usage
 
-1. Create Rserve hooks:
+1. Create Rserve context provider:
 
 ```tsx
 // utils/rserve.ts
-import { createRserveHooks } from "react-rserve";
+import { createRserveProvider } from "react-rserve";
 
 // generated using the `ts` R package: github.com/tmelliott/ts
 import app from "../path/to/app.ts";
 
-export const rserve = createRserveHooks(app);
+export const { RserveContext, RserveProvider, useRserve } =
+  createRserveProvider(app, {
+    host: "localhost:6311",
+  });
 ```
+
+TODO: create this file with the `ts` package.
 
 2. Set up the provider:
 
 ```tsx
 // App.tsx
-import { RserveClient } from "react-rserve";
+import { RserveProvider } from "./utils/rserve";
 import DemoComponent from "./DemoComponent";
 
 export default function App() {
   return (
-    <RserveClient host="localhost:6311">
+    <RserveProvider>
       <div>
         <h1>React Rserve</h1>
         <DemoComponent />
       </div>
-    </RserveClient>
+    </RserveProvider>
   );
 }
 ```
