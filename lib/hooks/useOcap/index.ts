@@ -1,16 +1,19 @@
 import React from "react";
 
-export function useOcap<T>(ocap?: () => Promise<T>) {
-  const [result, setResult] = React.useState<T | undefined>(undefined);
-
+export function useOcap<R, Args extends any[] = []>(
+  ocap: ((...args: Args) => Promise<R>) | undefined,
+  ...args: Args
+) {
+  const [result, setResult] = React.useState<R | undefined>(undefined);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<Error | undefined>(undefined);
 
+  // useEffect should only run when ocap or args change
   React.useEffect(() => {
     if (!ocap) return;
     const executeOcap = async () => {
       try {
-        const res = await ocap();
+        const res = await ocap(...args);
         setResult(res);
         setLoading(false);
       } catch (error) {
@@ -22,7 +25,17 @@ export function useOcap<T>(ocap?: () => Promise<T>) {
       }
     };
     executeOcap();
+  }, [ocap, args]);
+
+  // message when ocap changes
+  React.useEffect(() => {
+    console.log("OCAP CHANGES");
   }, [ocap]);
+
+  // message when args change
+  React.useEffect(() => {
+    console.log("ARGS CHANGES");
+  }, [args]);
 
   return {
     result,
@@ -40,7 +53,7 @@ export function useOcap<T>(ocap?: () => Promise<T>) {
         error: string;
       }
     | {
-        result: T;
+        result: R;
         loading: false;
         error: undefined;
       };

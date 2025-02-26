@@ -48,7 +48,7 @@ export function createRserveProvider<TFuns extends z.ZodRawShape>(
         }
       };
       connect();
-    }, [config]);
+    });
 
     useEffect(() => {
       if (!con) return;
@@ -62,7 +62,7 @@ export function createRserveProvider<TFuns extends z.ZodRawShape>(
         }
       };
       init();
-    }, [con, schema]);
+    }, [con]);
 
     return (
       <RserveContext.Provider value={{ app }}>
