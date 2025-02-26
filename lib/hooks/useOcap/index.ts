@@ -1,60 +1,58 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
+
+type StateType<R> =
+  | {
+      result: undefined;
+      loading: true;
+      error: undefined;
+    }
+  | {
+      result: undefined;
+      loading: false;
+      error: string;
+    }
+  | {
+      result: R;
+      loading: false;
+      error: undefined;
+    };
 
 export function useOcap<R, Args extends any[] = []>(
   ocap: ((...args: Args) => Promise<R>) | undefined,
   ...args: Args
 ) {
-  const [result, setResult] = React.useState<R | undefined>(undefined);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<Error | undefined>(undefined);
+  console.log("useOcap");
 
-  // useEffect should only run when ocap or args change
-  React.useEffect(() => {
+  const [state, setState] = React.useState<StateType<R>>({
+    result: undefined,
+    loading: true,
+    error: undefined,
+  });
+
+  const arrayArg = useMemo(() => args, [args]);
+
+  const executeOcap = useCallback(async () => {
     if (!ocap) return;
-    const executeOcap = async () => {
-      try {
-        const res = await ocap(...args);
-        setResult(res);
-        setLoading(false);
-      } catch (error) {
-        if (error instanceof Error) {
-          setError(error);
-        } else {
-          setError(new Error("An unknown error occurred"));
-        }
+    setState({ result: undefined, loading: true, error: undefined });
+    try {
+      const res = await ocap(...arrayArg);
+      setState({ result: res, loading: false, error: undefined });
+    } catch (error) {
+      if (error instanceof Error) {
+        setState({ result: undefined, loading: false, error: error.message });
+      } else {
+        setState({
+          result: undefined,
+          loading: false,
+          error: "An unknown error occurred",
+        });
       }
-    };
+    }
+  }, [ocap, arrayArg]);
+
+  React.useEffect(() => {
     executeOcap();
-  }, [ocap, args]);
+  }, [executeOcap]);
 
-  // message when ocap changes
-  React.useEffect(() => {
-    console.log("OCAP CHANGES");
-  }, [ocap]);
-
-  // message when args change
-  React.useEffect(() => {
-    console.log("ARGS CHANGES");
-  }, [args]);
-
-  return {
-    result,
-    loading: loading,
-    error: error?.message,
-  } as
-    | {
-        result: undefined;
-        loading: true;
-        error: undefined;
-      }
-    | {
-        result: undefined;
-        loading: false;
-        error: string;
-      }
-    | {
-        result: R;
-        loading: false;
-        error: undefined;
-      };
+  return state;
 }
