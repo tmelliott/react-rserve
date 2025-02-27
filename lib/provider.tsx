@@ -54,7 +54,6 @@ export function createRserveProvider<TFuns extends z.ZodRawShape>(
           connectionRef.current = con;
 
           // Get app instance
-          console.log("Connecting to app");
           const res: AppType<TFuns> = (await con.ocap(schema)) as any;
           setApp(res);
         } catch (error) {
