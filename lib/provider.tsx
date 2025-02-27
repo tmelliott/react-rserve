@@ -74,7 +74,7 @@ export function createRserveProvider<TFuns extends z.ZodRawShape>(
           connectionRef.current = null;
         }
       };
-    }, []);
+    }, [isConnecting]);
 
     return (
       <RserveContext.Provider value={{ app, isConnecting }}>

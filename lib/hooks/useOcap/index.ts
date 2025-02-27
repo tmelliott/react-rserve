@@ -19,22 +19,26 @@ export function useOcap<R, Args extends any[] = []>(
 
   // Use refs to track mounted state and prevent race conditions
   const mountedRef = useRef(true);
-  const requestIdRef = useRef(0);
 
   // Create a stable dependency array for args
-  const argsDepKey = useRef("");
+  let argsDepKey: string;
   try {
     // This is a hack to create a stable dependency for the effect
     // without causing rerenders due to complex arguments
-    argsDepKey.current = JSON.stringify(args);
-  } catch (e) {
+    argsDepKey = JSON.stringify(args);
+  } catch (_e) {
     // If JSON.stringify fails (circular references, etc.), use a counter
-    argsDepKey.current = String(Date.now());
+    argsDepKey = String(Date.now());
   }
+
+  const argsRef = useRef(args);
+  argsRef.current = args;
 
   useEffect(() => {
     // Component mounted
     mountedRef.current = true;
+
+    let active = true;
 
     // If no ocap, don't try to execute
     if (!ocap) {
@@ -53,17 +57,14 @@ export function useOcap<R, Args extends any[] = []>(
       error: undefined,
     });
 
-    // Create a request ID to handle race conditions
-    const currentRequestId = ++requestIdRef.current;
-
     // Execute the function
     const execute = async () => {
       try {
-        const result = await ocap(...args);
+        const result = await ocap(...argsRef.current);
 
         // Only update state if this is the most recent request
         // and the component is still mounted
-        if (currentRequestId === requestIdRef.current && mountedRef.current) {
+        if (active && mountedRef.current) {
           setState({
             result,
             loading: false,
@@ -73,7 +74,7 @@ export function useOcap<R, Args extends any[] = []>(
       } catch (error) {
         // Only update state if this is the most recent request
         // and the component is still mounted
-        if (currentRequestId === requestIdRef.current && mountedRef.current) {
+        if (active && mountedRef.current) {
           if (error instanceof Error) {
             setState({
               result: undefined,
@@ -95,12 +96,9 @@ export function useOcap<R, Args extends any[] = []>(
 
     // Cleanup function for unmount or dependency change
     return () => {
-      if (currentRequestId === requestIdRef.current) {
-        // This is the most recent request, mark that we no longer care about it
-        requestIdRef.current++;
-      }
+      active = false;
     };
-  }, [ocap, argsDepKey.current]); // using stable deps
+  }, [ocap, argsDepKey]); // using stable deps
 
   // Clean up on unmount
   useEffect(() => {

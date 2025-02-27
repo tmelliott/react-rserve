@@ -1,11 +1,14 @@
 import { useRserve } from "./utils/rserve";
 import { useOcap } from "../lib/hooks/useOcap";
+import { useState } from "react";
 
 function App() {
   const { app, isConnecting } = useRserve();
 
+  const [input, setInput] = useState(["hello", "world"]);
+
   // Always call the hook but pass undefined if app isn't available
-  const rResult = useOcap(app?.fn_first, ["hello", "world"]);
+  const rResult = useOcap(app?.fn_first, input);
   const rResult2 = useOcap(app?.fn_mean, new Float64Array([1, 2, 3, 4, 5]));
   const rResult3 = useOcap(
     app?.sample_num,
@@ -38,12 +41,19 @@ function App() {
 
       <div>
         <h2>First Function Result</h2>
-        {rResult.loading ? (
+        <input
+          type="text"
+          value={input.join(" ")}
+          onChange={(e) => setInput(e.target.value.split(" "))}
+        />
+        {rResult.result ? (
+          <p>Result: {rResult.result}</p>
+        ) : rResult.loading ? (
           <p>Loading...</p>
         ) : rResult.error ? (
           <p>Error: {rResult.error}</p>
         ) : (
-          <p>Result: {rResult.result}</p>
+          <p>Some issue</p>
         )}
       </div>
 
