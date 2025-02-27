@@ -16,18 +16,6 @@ pnpm changeset
 
 This will prompt you to select the type of change (patch, minor, major) and to provide a description of the change.
 
-To apply changesets (update versions and changelogs):
-
-```bash
-pnpm version
-```
-
-To publish a new version:
-
-```bash
-pnpm release
-```
-
 The repository is configured with GitHub Actions that will automatically create a Release PR when changesets are pushed to the main branch.
 
 ## Example usage

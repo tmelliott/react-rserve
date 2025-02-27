@@ -13,7 +13,6 @@ dist-ssr
 *.local
 
 # Changesets
-.changeset/*.md
 !.changeset/README.md
 
 # Editor directories and files
