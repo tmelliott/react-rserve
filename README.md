@@ -1,5 +1,8 @@
 **react-rserve**
 
+[![R-CMD-check](https://github.com/tmelliott/react-rserve/actions/workflows/ci.yml/badge.svg)](https://github.com/tmelliott/react-rserve/actions/workflows/ci.yml)
+[![NPM Version](https://img.shields.io/npm/v/@tmelliott/react-rserve)](https://www.npmjs.com/package/@tmelliott/react-rserve)
+
 A React library that provides utilities for connecting to and using Rserve.
 
 ## Development
