@@ -1,4 +1,4 @@
-**react-rserve**
+# react-rserve
 
 [![R-CMD-check](https://github.com/tmelliott/react-rserve/actions/workflows/ci.yml/badge.svg)](https://github.com/tmelliott/react-rserve/actions/workflows/ci.yml)
 [![NPM Version](https://img.shields.io/npm/v/@tmelliott/react-rserve)](https://www.npmjs.com/package/@tmelliott/react-rserve)
@@ -67,7 +67,7 @@ import { rserve } from "./utils/rserve";
 
 export default function DemoComponent() {
   const { app } = useRserve();
-  const { result, loading, error } = useOcap(app.fun);
+  const { result, loading, error } = useOcap(app?.fun);
 
   if (loading) {
     return <p>Loading...</p>;
@@ -89,7 +89,7 @@ import type { App } from "../path/to/app.ts";
 // AnotherComponent.tsx
 function AnotherComponent() {
   const { app } = useRserve();
-  const { result, loading } = useOcap(app.anotherFun);
+  const { result, loading } = useOcap(app?.anotherFun);
 
   if (loading) {
     return <p>Loading...</p>;
