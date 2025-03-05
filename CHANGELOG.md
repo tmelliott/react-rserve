@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.2.2
+
+### Patch Changes
+
+- 203186c: Fix CI
+
 ## 0.2.1
 
 ### Patch Changes
