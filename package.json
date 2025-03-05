@@ -1,7 +1,7 @@
 {
   "name": "@tmelliott/react-rserve",
   "private": false,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "repository": {
     "type": "git",
     "url": "https://github.com/tmelliott/react-rserve"

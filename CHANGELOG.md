@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.2.3
+
+### Patch Changes
+
+- 8ce8fc8: Fit export of createRserveProvider
+
 ## 0.2.2
 
 ### Patch Changes
