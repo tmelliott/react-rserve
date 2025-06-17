@@ -1,4 +1,4 @@
-FROM r-base:4.4
+FROM r-base:latest
 
 # Install R packages
 RUN apt-get update && apt-get install -y \
