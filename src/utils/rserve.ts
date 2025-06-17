@@ -1,4 +1,4 @@
-import { createRserveProvider } from "../../lib/provider.tsx";
+import { createRserveProvider } from "../../lib/provider";
 
 // generated using the `ts` R package: github.com/tmelliott/ts
 import appSchema from "../rserve/demo.rserve.ts";

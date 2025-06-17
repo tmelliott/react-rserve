@@ -7,7 +7,9 @@ function App() {
 
   const [input, setInput] = useState(["hello", "world"]);
 
-  // Always call the hook but pass undefined if app isn't available
+  const [progress, setProgress] = useState(0);
+
+  // // Always call the hook but pass undefined if app isn't available
   const rResult = useOcap(app?.fn_first, input);
   const rResult2 = useOcap(app?.fn_mean, new Float64Array([1, 2, 3, 4, 5]));
   const rResult3 = useOcap(
@@ -15,6 +17,15 @@ function App() {
     new Float64Array([1, 2, 3, 4, 5]),
     3
   );
+
+  const _r4 = useOcap(
+    app?.iterate,
+    (i, k: (_err: any, _result: number) => void) => {
+      setProgress(i);
+      k(null, i);
+    }
+  );
+  console.log(_r4);
 
   if (isConnecting) {
     return (
@@ -39,7 +50,7 @@ function App() {
       <h1>React + Rserve</h1>
       <p>Connected to R service</p>
 
-      <div>
+      <section>
         <h2>First Function Result</h2>
         <input
           type="text"
@@ -55,9 +66,9 @@ function App() {
         ) : (
           <p>Some issue</p>
         )}
-      </div>
+      </section>
 
-      <div>
+      <section>
         <h2>Mean Function Result</h2>
         {rResult2.loading ? (
           <p>Loading...</p>
@@ -66,9 +77,9 @@ function App() {
         ) : (
           <p>Result: {rResult2.result}</p>
         )}
-      </div>
+      </section>
 
-      <div>
+      <section>
         <h2>Sample Function Result</h2>
         {rResult3.loading ? (
           <p>Loading...</p>
@@ -84,7 +95,15 @@ function App() {
             ]
           </p>
         )}
-      </div>
+      </section>
+
+      <section>
+        <h2>
+          Iterative progress update
+          {/* {_r4.loading && } */}
+        </h2>
+        <p>Progress: {progress}/10</p>
+      </section>
     </div>
   );
 }

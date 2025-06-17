@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { glob } from "glob";
 import react from "@vitejs/plugin-react";
 import dts from "vite-plugin-dts";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -12,6 +13,7 @@ export default defineConfig({
     dts({
       tsconfigPath: resolve(__dirname, "tsconfig.lib.json"),
     }),
+    nodePolyfills(),
   ],
   build: {
     lib: {
