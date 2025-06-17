@@ -6,13 +6,10 @@ RUN apt-get update && apt-get install -y \
 RUN R -e "install.packages('pak'); print(.libPaths())"
 RUN R -e "pak::pkg_install('Rserve')"
 
-COPY scripts scripts
-RUN R -e 'system("grep -o \"[a-zA-Z]*::\" scripts/app_functions.R | grep -o \"[a-zA-Z]*\" | sort | uniq", intern = TRUE) |> pak::pak()'
-
-COPY server server
-COPY Data Data
+COPY src/rserve rserve
+RUN R -e 'system("grep -o \"[a-zA-Z]*::\" rserve/demo.R | grep -o \"[a-zA-Z]*\" | sort | uniq", intern = TRUE) |> pak::pak()'
 
 # compile
-RUN Rscript -e 'ts::ts_compile(\"src/rserve/demo.R\"); ts::ts_deploy(\"src/rserve/demo.R\")'
+RUN Rscript -e 'ts::ts_compile(\"rserve/demo.R\"); ts::ts_deploy(\"rserve/demo.R\")'
 
-CMD ["Rscript", "src/rserve/demo.rserve.R"]
+CMD ["Rscript", "rserve/demo.rserve.R"]
