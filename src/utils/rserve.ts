@@ -5,5 +5,5 @@ import appSchema from "../rserve/demo.rserve.ts";
 
 export const { RserveContext, RserveProvider, useRserve } =
   createRserveProvider(appSchema, {
-    host: "http://127.0.0.1:6311",
+    host: import.meta.env.VITE_RSERVE_HOST ?? "http://127.0.0.1:6311",
   });
