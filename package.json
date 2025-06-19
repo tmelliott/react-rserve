@@ -22,7 +22,7 @@
     "build": "tsc -b ./tsconfig.lib.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "vite preview",
+    "start": "vite preview --host",
     "prepublishOnly": "pnpm run build",
     "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
     "ci": "pnpm run lint && pnpm run build",
