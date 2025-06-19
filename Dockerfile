@@ -6,7 +6,7 @@ RUN R -e "install.packages('Rserve')"
 RUN R -e "install.packages('remotes')"
 RUN R -e "remotes::install_github('tmelliott/ts@develop')"
 
-COPY ../src/rserve rserve
+COPY src/rserve rserve
 # RUN R -e 'system("grep -o \"[a-zA-Z]*::\" rserve/demo.R | grep -o \"[a-zA-Z]*\" | sort | uniq", intern = TRUE) |> pak::pak()'
 
 # compile
