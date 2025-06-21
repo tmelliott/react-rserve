@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.2.5
+
+### Patch Changes
+
+- update dependency versions
+
 ## 0.2.4
 
 ### Patch Changes
