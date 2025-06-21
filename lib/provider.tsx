@@ -2,9 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import RserveClient from "rserve-ts";
 import { z } from "zod";
 
-type RserveOptions = {
-  host: string;
-};
+type RserveOptions = Parameters<(typeof RserveClient)["create"]>[0];
 
 export type RserveContextInterface<T> = {
   app?: T;
