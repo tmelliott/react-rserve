@@ -1,5 +1,15 @@
 # @tmelliott/react-rserve
 
+## 0.3.0
+
+### Minor Changes
+
+- 2780462: BREAKING CHANGE: useOcap takes array as second argument; and optional config argument
+
+### Patch Changes
+
+- 2780462: Add in config options to useOcap: enabled, initialData, placeholderData
+
 ## 0.2.5
 
 ### Patch Changes
