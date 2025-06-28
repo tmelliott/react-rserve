@@ -10,22 +10,26 @@ function App() {
   const [progress, setProgress] = useState(0);
 
   // // Always call the hook but pass undefined if app isn't available
-  const rResult = useOcap(app?.fn_first, input);
-  const rResult2 = useOcap(app?.fn_mean, new Float64Array([1, 2, 3, 4, 5]));
-  const rResult3 = useOcap(
-    app?.sample_num,
+  const rResult = useOcap(app?.fn_first, [input]);
+  const rResult2 = useOcap(app?.fn_mean, [new Float64Array([1, 2, 3, 4, 5])]);
+  const rResult3 = useOcap(app?.sample_num, [
     new Float64Array([1, 2, 3, 4, 5]),
-    3
-  );
+    3,
+  ]);
 
+  const [r4enabled, setR4enabled] = useState(false);
   const _r4 = useOcap(
     app?.iterate,
-    (i, k: (_err: any, _result: number) => void) => {
-      setProgress(i);
-      k(null, i);
+    [
+      (i, k: (_err: any, _result: number) => void) => {
+        setProgress(i);
+        k(null, i);
+      },
+    ],
+    {
+      enabled: r4enabled,
     }
   );
-  console.log(_r4);
 
   if (isConnecting) {
     return (
@@ -98,10 +102,10 @@ function App() {
       </section>
 
       <section>
-        <h2>
-          Iterative progress update
-          {/* {_r4.loading && } */}
-        </h2>
+        <h2>Iterative progress update</h2>
+        <button onClick={() => setR4enabled(true)}>
+          {_r4.loading ? " ... " : "Start"}
+        </button>
         <p>Progress: {progress}/10</p>
       </section>
     </div>

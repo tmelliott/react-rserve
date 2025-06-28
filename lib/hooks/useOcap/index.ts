@@ -6,13 +6,35 @@ type StateType<R> = {
   error: string | undefined;
 };
 
+type Config<Result> = {
+  enabled: boolean;
+  initialData: Result | undefined;
+  placeholderData: Result | StateFun<Result> | undefined;
+};
+
+// const defaultConfig = {
+//   enabled: true,
+//   initialData: undefined,
+//   placeholderData: undefined,
+// } satisfies Config<any>;
+
+type StateFun<T> = (prev: T | undefined) => T;
+const isStateFunction = <T = any>(f: unknown): f is StateFun<T> => {
+  return typeof f === "function";
+};
+
 export function useOcap<R, Args extends any[] = []>(
   ocap: ((...args: Args) => Promise<R>) | undefined,
-  ...args: Args
+  args: Args,
+  config?: Partial<Config<R>>
 ) {
+  const ocapEnabled = config?.enabled ?? true;
+  const ocapInitialData = config?.initialData;
+  const ocapPlaceholder = config?.placeholderData;
+
   // Initialize state - default to not loading if no ocap provided
   const [state, setState] = useState<StateType<R>>({
-    result: undefined,
+    result: ocapInitialData,
     loading: false,
     error: undefined,
   });
@@ -35,6 +57,8 @@ export function useOcap<R, Args extends any[] = []>(
   argsRef.current = args;
 
   useEffect(() => {
+    if (!ocapEnabled) return;
+
     // Component mounted
     mountedRef.current = true;
 
@@ -43,7 +67,7 @@ export function useOcap<R, Args extends any[] = []>(
     // If no ocap, don't try to execute
     if (!ocap) {
       setState({
-        result: undefined,
+        result: ocapInitialData,
         loading: false,
         error: undefined,
       });
@@ -51,11 +75,14 @@ export function useOcap<R, Args extends any[] = []>(
     }
 
     // Set loading only if we have a function
-    setState({
-      result: undefined,
+    setState((prev) => ({
+      // result: undefined,
+      result: isStateFunction<R>(ocapPlaceholder)
+        ? ocapPlaceholder(prev.result)
+        : ocapPlaceholder,
       loading: true,
       error: undefined,
-    });
+    }));
 
     // Execute the function
     const execute = async () => {
@@ -98,7 +125,7 @@ export function useOcap<R, Args extends any[] = []>(
     return () => {
       active = false;
     };
-  }, [ocap, argsDepKey]); // using stable deps
+  }, [ocap, argsDepKey, ocapEnabled, ocapPlaceholder, ocapInitialData]); // using stable deps
 
   // Clean up on unmount
   useEffect(() => {
