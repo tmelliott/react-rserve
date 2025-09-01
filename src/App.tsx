@@ -1,6 +1,6 @@
 import { useRserve, type App } from "./utils/rserve";
 import { useOcap } from "../lib/hooks/useOcap";
-import { Suspense, useState } from "react";
+import { useState } from "react";
 
 function App() {
   const { app, isConnecting } = useRserve();

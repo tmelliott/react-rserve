@@ -86,74 +86,39 @@ export function useOcap<R, Args extends any[] = []>(
     }));
 
     // Execute the function
-    const execute = async () => {
-      ocap(...argsRef.current)
-        .then((value) => {
-          if (active && mountedRef.current) {
+    ocap(...argsRef.current)
+      .then((value) => {
+        if (active && mountedRef.current) {
+          setState({
+            result: value,
+            loading: false,
+            error: undefined,
+          });
+        }
+      })
+      .catch((error) => {
+        if (active && mountedRef.current) {
+          if (isRServeError(error)) {
             setState({
-              result: value,
+              result: undefined,
               loading: false,
-              error: undefined,
+              error: error[0],
+            });
+          } else if (error instanceof Error) {
+            setState({
+              result: undefined,
+              loading: false,
+              error: error.message,
+            });
+          } else {
+            setState({
+              result: undefined,
+              loading: false,
+              error: "An unknown error occurred",
             });
           }
-        })
-        .catch((error) => {
-          if (active && mountedRef.current) {
-            if (isRServeError(error)) {
-              setState({
-                result: undefined,
-                loading: false,
-                error: error[0],
-              });
-            } else if (error instanceof Error) {
-              setState({
-                result: undefined,
-                loading: false,
-                error: error.message,
-              });
-            } else {
-              setState({
-                result: undefined,
-                loading: false,
-                error: "An unknown error occurred",
-              });
-            }
-          }
-        });
-      // try {
-      //   const result = await ocap(...argsRef.current);
-
-      //   // Only update state if this is the most recent request
-      //   // and the component is still mounted
-      //   if (active && mountedRef.current) {
-      //     setState({
-      //       result,
-      //       loading: false,
-      //       error: undefined,
-      //     });
-      //   }
-      // } catch (error) {
-      //   // Only update state if this is the most recent request
-      //   // and the component is still mounted
-      //   if (active && mountedRef.current) {
-      //     if (error instanceof Error) {
-      //       setState({
-      //         result: undefined,
-      //         loading: false,
-      //         error: error.message,
-      //       });
-      //     } else {
-      //       setState({
-      //         result: undefined,
-      //         loading: false,
-      //         error: "An unknown error occurred",
-      //       });
-      //     }
-      //   }
-      // }
-    };
-
-    execute();
+        }
+      });
 
     // Cleanup function for unmount or dependency change
     return () => {
