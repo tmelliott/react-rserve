@@ -1,6 +1,6 @@
-import { useRserve } from "./utils/rserve";
+import { useRserve, type App } from "./utils/rserve";
 import { useOcap } from "../lib/hooks/useOcap";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 function App() {
   const { app, isConnecting } = useRserve();
@@ -107,9 +107,33 @@ function App() {
           {_r4.loading ? " ... " : "Start"}
         </button>
         <p>Progress: {progress}/10</p>
+
+        <p>
+          Note that this locks the entire R process until it is complete. Try
+          playing with First Function.
+        </p>
+      </section>
+
+      <section>
+        <h2>Error handling</h2>
+        <BadComponent fn={app.bad_fn} />
       </section>
     </div>
   );
 }
 
 export default App;
+
+const BadComponent = ({ fn }: { fn: App["bad_fn"] }) => {
+  const { result, loading, error } = useOcap(fn, []);
+
+  if (loading) return <>Loading ... ... ... </>;
+  if (error)
+    return (
+      <>
+        There was an error! <pre>{error}</pre>
+      </>
+    );
+
+  return <>Loaded: {result}</>;
+};

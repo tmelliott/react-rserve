@@ -7,3 +7,5 @@ export const { RserveContext, RserveProvider, useRserve } =
   createRserveProvider(appSchema, {
     host: import.meta.env.VITE_RSERVE_HOST ?? "http://127.0.0.1:6311",
   });
+
+export type App = NonNullable<ReturnType<typeof useRserve>["app"]>;

@@ -37,3 +37,11 @@ iterate <- ts_function(
     },
     result = ts_null()
 )
+
+bad_fn <- ts_function(
+    function() {
+        Sys.sleep(0.5)
+        stop("There was an error in R")
+    },
+    result = ts_union(ts_numeric(1), ts_undefined())
+)

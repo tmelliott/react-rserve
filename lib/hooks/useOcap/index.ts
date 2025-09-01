@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { isRServeError } from "rserve-ts";
 
 type StateType<R> = {
   result: R | undefined;
@@ -86,37 +87,70 @@ export function useOcap<R, Args extends any[] = []>(
 
     // Execute the function
     const execute = async () => {
-      try {
-        const result = await ocap(...argsRef.current);
-
-        // Only update state if this is the most recent request
-        // and the component is still mounted
-        if (active && mountedRef.current) {
-          setState({
-            result,
-            loading: false,
-            error: undefined,
-          });
-        }
-      } catch (error) {
-        // Only update state if this is the most recent request
-        // and the component is still mounted
-        if (active && mountedRef.current) {
-          if (error instanceof Error) {
+      ocap(...argsRef.current)
+        .then((value) => {
+          if (active && mountedRef.current) {
             setState({
-              result: undefined,
+              result: value,
               loading: false,
-              error: error.message,
-            });
-          } else {
-            setState({
-              result: undefined,
-              loading: false,
-              error: "An unknown error occurred",
+              error: undefined,
             });
           }
-        }
-      }
+        })
+        .catch((error) => {
+          if (active && mountedRef.current) {
+            if (isRServeError(error)) {
+              setState({
+                result: undefined,
+                loading: false,
+                error: error[0],
+              });
+            } else if (error instanceof Error) {
+              setState({
+                result: undefined,
+                loading: false,
+                error: error.message,
+              });
+            } else {
+              setState({
+                result: undefined,
+                loading: false,
+                error: "An unknown error occurred",
+              });
+            }
+          }
+        });
+      // try {
+      //   const result = await ocap(...argsRef.current);
+
+      //   // Only update state if this is the most recent request
+      //   // and the component is still mounted
+      //   if (active && mountedRef.current) {
+      //     setState({
+      //       result,
+      //       loading: false,
+      //       error: undefined,
+      //     });
+      //   }
+      // } catch (error) {
+      //   // Only update state if this is the most recent request
+      //   // and the component is still mounted
+      //   if (active && mountedRef.current) {
+      //     if (error instanceof Error) {
+      //       setState({
+      //         result: undefined,
+      //         loading: false,
+      //         error: error.message,
+      //       });
+      //     } else {
+      //       setState({
+      //         result: undefined,
+      //         loading: false,
+      //         error: "An unknown error occurred",
+      //       });
+      //     }
+      //   }
+      // }
     };
 
     execute();

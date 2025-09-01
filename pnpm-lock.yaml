@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       rserve-ts:
-        specifier: ^0.8.2
-        version: 0.8.2
+        specifier: ^0.8.4
+        version: 0.8.4
       zod:
         specifier: ^3.25.67
         version: 3.25.67
@@ -1905,8 +1905,8 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
-  rserve-ts@0.8.2:
-    resolution: {integrity: sha512-m5+IGpd2GtRnyTHNlbzU99ZX3c4kbZLpbX2pq5Ji22ykF9l1g6cOiuj6qSmPAAR8XMVx0Erycxq8Pr0Dto9jbQ==}
+  rserve-ts@0.8.4:
+    resolution: {integrity: sha512-N8xM3iK/OJQQwi3HX4E/xGhM2qACEYCDRuVB+grZVSlzpApz9xbxjDiou0YbSk6D7dJHcf8z+V8uWhTGl5vkLQ==}
 
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
@@ -4311,7 +4311,7 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.34.8
       fsevents: 2.3.3
 
-  rserve-ts@0.8.2:
+  rserve-ts@0.8.4:
     dependencies:
       underscore: 1.13.7
       zod: 3.25.67
