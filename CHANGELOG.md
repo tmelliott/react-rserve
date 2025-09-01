@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.4.0
+
+### Minor Changes
+
+- 3c430af: Add error handling into useOcap
+
 ## 0.3.0
 
 ### Minor Changes
