@@ -38,7 +38,7 @@ export const { RserveContext, RserveProvider, useRserve } =
   });
 ```
 
-TODO: create this file with the `ts` package.
+TODO: create this file with the `RserveTS` package.
 
 2. Set up the provider:
 
