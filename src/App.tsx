@@ -1,12 +1,15 @@
-import { useRserve, type App } from "./utils/rserve";
-import { useOcap } from "../lib/hooks/useOcap";
+import { useRserve, useOcap, type AppType } from "../lib/main";
 import { useState } from "react";
 
+import appSchema from "./rserve/demo.rserve.ts";
+type App = AppType<typeof appSchema>;
+
 function App() {
-  const { app, isConnecting } = useRserve();
+  const { app, loading, error } = useRserve(appSchema, {
+    host: import.meta.env.VITE_RSERVE_HOST,
+  });
 
   const [input, setInput] = useState(["hello", "world"]);
-
   const [progress, setProgress] = useState(0);
 
   // // Always call the hook but pass undefined if app isn't available
@@ -31,7 +34,7 @@ function App() {
     }
   );
 
-  if (isConnecting) {
+  if (loading) {
     return (
       <div>
         <h1>React + Rserve</h1>
@@ -39,12 +42,12 @@ function App() {
       </div>
     );
   }
-
   if (!app) {
     return (
       <div>
         <h1>React + Rserve</h1>
         <p>Could not connect to R service</p>
+        {error && <p>Error: {error}</p>}
       </div>
     );
   }

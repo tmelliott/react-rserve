@@ -27,7 +27,7 @@
     "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
     "ci": "pnpm run lint && pnpm run build",
     "changeset": "changeset",
-    "compile": "Rscript -e 'ts::ts_compile(\"src/rserve/demo.R\"); ts::ts_deploy(\"src/rserve/demo.R\")'",
+    "compile": "Rscript -e 'RserveTS::ts_compile(\"src/rserve/demo.R\"); RserveTS::ts_deploy(\"src/rserve/demo.R\")'",
     "rserve": "Rscript src/rserve/demo.rserve.R"
   },
   "peerDependencies": {
