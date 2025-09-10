@@ -23,50 +23,17 @@ The repository is configured with GitHub Actions that will automatically create 
 
 ## Example usage
 
-1. Create Rserve context provider:
-
-```tsx
-// utils/rserve.ts
-import { createRserveProvider } from "react-rserve";
-
-// generated using the `ts` R package: github.com/tmelliott/ts
-import app from "../path/to/app.ts";
-
-export const { RserveContext, RserveProvider, useRserve } =
-  createRserveProvider(app, {
-    host: "localhost:6311",
-  });
-```
-
-TODO: create this file with the `RserveTS` package.
-
-2. Set up the provider:
-
-```tsx
-// App.tsx
-import { RserveProvider } from "./utils/rserve";
-import DemoComponent from "./DemoComponent";
-
-export default function App() {
-  return (
-    <RserveProvider>
-      <div>
-        <h1>React Rserve</h1>
-        <DemoComponent />
-      </div>
-    </RserveProvider>
-  );
-}
-```
-
-3. Use the app in components:
+1. Connect to R using the hook:
 
 ```tsx
 // DemoComponent.tsx
-import { rserve } from "./utils/rserve";
+import { useRserve, useOcap } from "tmelliott/react-rserve";
+import appSchema from "./path/to/app.rserve.ts";
 
 export default function DemoComponent() {
-  const { app } = useRserve();
+  const { app } = useRserve(appSchema, {
+    host: "https://localhost:6311",
+  });
   const { result, loading, error } = useOcap(app?.fun);
 
   if (loading) {
@@ -81,14 +48,15 @@ export default function DemoComponent() {
 }
 ```
 
-If an Ocap returns more Ocaps, you need to use conditional components.
+If an Ocap returns more Ocaps, you can use conditional components (and make use of the `AppType` helper):
 
 ```tsx
-import type { App } from "../path/to/app.ts";
+import { useRserve, useOcap, type AppType } from "@tmelliott/react-rserve";
+type App = AppType<typeof appSchema>;
 
 // AnotherComponent.tsx
 function AnotherComponent() {
-  const { app } = useRserve();
+  const { app } = useRserve(appSchema, {...});
   const { result, loading } = useOcap(app?.anotherFun);
 
   if (loading) {
@@ -116,5 +84,32 @@ function SubComponent({ features }: { features: AnotherFunResult }) {
   }
 
   return <p>{result}</p>;
+}
+```
+
+Alternatively, you can bypass hooks and use `<Suspense>` instead:
+
+```tsx
+import { Suspense } from "react";
+import { useRserve, type AppType } from "@tmelliott/react-rserve";
+type App = AppType<typeof appSchema>;
+
+function MyComponent() {
+  const { app } = useRserve(appSchema, { host: "ip-of-host" });
+
+  return (
+    <div>
+      <h1>Compute results using suspense</h1>
+      <Suspense fallback={<>Loading ...</>}>
+        <ResultComponent fn={app.fn} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function ResultComponent({ fn }: { app: App.fn }) {
+  const result = await fn();
+
+  return <div>Result: {result}</div>;
 }
 ```

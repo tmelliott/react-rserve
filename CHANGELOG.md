@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.5.0
+
+### Breaking changes
+
+- replace context provider (`<Rserve></Rserve>`) with a hook `useRserve({...})`
+
 ## 0.4.0
 
 ### Minor Changes

@@ -51,20 +51,25 @@ bad_fn <- ts_function(
     result = ts_union(ts_numeric(1), ts_undefined()),
     export = TRUE
 )
-first.fns <- function() ts_app(list(
-   bad_fn = bad_fn,
-   fn_first = fn_first,
-   fn_mean = fn_mean,
-   iterate = iterate,
-   sample_num = sample_num
-))
+first.fns <- function() {
+    ts_app(list(
+        bad_fn = bad_fn,
+        fn_first = fn_first,
+        fn_mean = fn_mean,
+        iterate = iterate,
+        sample_num = sample_num
+    ))
+}
 
-oc.init <- function() Rserve:::ocap(first.fns)
+oc.init <- function() {
+    cat("Init ...\n")
+    Rserve:::ocap(first.fns)
+}
 
 Rserve::run.Rserve(
-  websockets.port = 6311,
-  websockets = TRUE,
-  oob = TRUE,
-  qap = FALSE,
-  websockets.qap.oc = TRUE
+    websockets.port = 6311,
+    websockets = TRUE,
+    oob = TRUE,
+    qap = FALSE,
+    websockets.qap.oc = TRUE
 )
