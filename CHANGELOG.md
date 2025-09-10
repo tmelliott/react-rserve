@@ -4,13 +4,7 @@
 
 ### Minor Changes
 
-- 3514304: Replace provider with hook
-
-## 0.5.0
-
-### Breaking changes
-
-- replace context provider (`<Rserve></Rserve>`) with a hook `useRserve({...})`
+- [Breaking change] 3514304: replace context provider (`<Rserve></Rserve>`) with a hook `useRserve({...})`
 
 ## 0.4.0
 
