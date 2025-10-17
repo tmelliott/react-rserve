@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import RserveClient from "rserve-ts";
 import { z } from "zod";
 
@@ -15,43 +15,133 @@ const defaultConfig = {
   host: "http://localhost:6311",
 };
 
+class RServeStore<T extends z.ZodRawShape> {
+  // private con: Awaited<ReturnType<typeof RserveClient.create>> | undefined;
+  private schema: T;
+  private config?: Partial<RserveOptions>;
+  private app: AppType<T> | undefined;
+  private loading: boolean = false;
+  private error: string | undefined;
+
+  private listeners = new Set<() => void>();
+  private snapshot: {
+    app: AppType<T> | undefined;
+    loading: boolean;
+    error: string | undefined;
+  };
+
+  constructor(schema: T, config?: Partial<RserveOptions>) {
+    console.log("CONSTRUCT");
+    this.schema = schema;
+    this.config = config;
+    this.loading = false;
+    this.snapshot = {
+      app: this.app,
+      loading: this.loading,
+      error: this.error,
+    };
+    this.init();
+  }
+
+  private init() {
+    this.loading = true;
+    this.updateSnapshot();
+
+    RserveClient.create({ ...defaultConfig, ...this.config })
+      .then((c) => {
+        return c.ocap(this.schema);
+      })
+      .then((res) => {
+        this.app = res as any;
+      })
+      .catch((e) => {
+        this.error = e;
+      })
+      .finally(() => {
+        this.loading = false;
+        this.updateSnapshot();
+      });
+  }
+
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+
+  private emitChange() {
+    this.listeners.forEach((listener) => listener());
+  }
+
+  private updateSnapshot() {
+    this.snapshot = {
+      app: this.app,
+      loading: this.loading,
+      error: this.error,
+    };
+    this.emitChange();
+  }
+
+  get = () => {
+    return this.snapshot;
+  };
+
+  destroy = () => {};
+}
+
 export function useRserve<TFuns extends z.ZodRawShape>(
   schema: TFuns,
   config?: Partial<RserveOptions>
 ) {
-  const [app, setApp] = useState<AppType<TFuns>>();
-  const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState<string>();
+  const storeRef = useRef<RServeStore<TFuns>>(undefined);
+
+  if (!storeRef.current) {
+    storeRef.current = new RServeStore(schema, config);
+  }
+
+  const state = useSyncExternalStore(
+    storeRef.current.subscribe,
+    storeRef.current.get
+  );
 
   useEffect(() => {
-    if (app) return;
-    if (connecting) return;
-    setConnecting(true);
-    RserveClient.create({ ...defaultConfig, ...config })
-      .then((con) => {
-        console.log("Connected: ", con, schema);
-        return con.ocap(schema);
-      })
-      .then((res) => {
-        console.log("Loaded: ", res);
-        setApp(res as any as AppType<TFuns>);
-        setConnecting(false);
-      })
-      .catch((e) => {
-        setApp(undefined);
-        setError(e);
-        setConnecting(false);
-      });
+    return () => storeRef.current?.destroy();
+  });
 
-    return () => {
-      console.log("Unmounting ");
-      setApp(undefined);
-    };
-  }, [app, connecting, config, schema]);
+  return state;
 
-  return {
-    app,
-    loading: connecting,
-    error,
-  };
+  // const [app, setApp] = useState<AppType<TFuns>>();
+  // const [connecting, setConnecting] = useState(false);
+  // const [error, setError] = useState<string>();
+
+  // useEffect(() => {
+  //   if (app) return;
+  //   if (connecting) return;
+  //   setConnecting(true);
+  //   RserveClient.create({ ...defaultConfig, ...config })
+  //     .then((con) => {
+  //       console.log("Connected: ", con, schema);
+  //       return con.ocap(schema);
+  //     })
+  //     .then((res) => {
+  //       console.log("Loaded: ", res);
+  //       setApp(res as any as AppType<TFuns>);
+  //       setConnecting(false);
+  //     })
+  //     .catch((e) => {
+  //       setApp(undefined);
+  //       setError(e);
+  //       setConnecting(false);
+  //     });
+
+  //   return () => {
+  //     console.log("Unmounting ");
+  //     setApp(undefined);
+  //   };
+  // }, [app, connecting, config, schema]);
+
+  // return {
+  //   app,
+  //   loading: connecting,
+  //   error,
+  // };
 }
