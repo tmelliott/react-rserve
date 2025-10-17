@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.6.0
+
+### Minor Changes
+
+- e944cb4: Use state store for useRserve hook, instead of useState/useEffect
+
 ## 0.5.0
 
 ### Minor Changes
