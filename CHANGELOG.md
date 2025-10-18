@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.6.1
+
+### Patch Changes
+
+- 0f36826: Reconnect when websocket disconnects
+
 ## 0.6.0
 
 ### Minor Changes
