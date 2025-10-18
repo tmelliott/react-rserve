@@ -18,7 +18,7 @@ const defaultConfig = {
 class RServeStore<T extends z.ZodRawShape> {
   // private con: Awaited<ReturnType<typeof RserveClient.create>> | undefined;
   private schema: T;
-  private config?: Partial<RserveOptions>;
+  private config: RserveOptions;
   private app: AppType<T> | undefined;
   private loading: boolean = false;
   private error: string | undefined;
@@ -31,9 +31,17 @@ class RServeStore<T extends z.ZodRawShape> {
   };
 
   constructor(schema: T, config?: Partial<RserveOptions>) {
-    console.log("CONSTRUCT");
+    console.log("CONSTRUCT", { config });
     this.schema = schema;
-    this.config = config;
+    this.config = {
+      ...defaultConfig,
+      ...config,
+      on_close: (event) => {
+        if (config && config.on_close) config.on_close(event);
+        console.log("WebSocket disconnected ... reconnecting ...");
+        this.init();
+      },
+    };
     this.loading = false;
     this.snapshot = {
       app: this.app,
@@ -47,8 +55,9 @@ class RServeStore<T extends z.ZodRawShape> {
     this.loading = true;
     this.updateSnapshot();
 
-    RserveClient.create({ ...defaultConfig, ...this.config })
+    RserveClient.create(this.config)
       .then((c) => {
+        console.log(c);
         return c.ocap(this.schema);
       })
       .then((res) => {
