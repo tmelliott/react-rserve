@@ -24,7 +24,7 @@ function App() {
   const _r4 = useOcap(
     app?.iterate,
     [
-      (i, k: (_err: any, _result: number) => void) => {
+      (i, k) => {
         setProgress(i);
         k(null, i);
       },

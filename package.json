@@ -1,7 +1,7 @@
 {
   "name": "@tmelliott/react-rserve",
   "private": false,
-  "version": "0.4.0",
+  "version": "0.6.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/tmelliott/react-rserve"
@@ -56,7 +56,7 @@
     "vite-plugin-node-polyfills": "^0.23.0"
   },
   "dependencies": {
-    "rserve-ts": "^0.8.4",
+    "rserve-ts": "^0.8.5",
     "zod": "^3.25.67"
   },
   "pnpm": {

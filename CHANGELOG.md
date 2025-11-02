@@ -1,10 +1,22 @@
 # @tmelliott/react-rserve
 
+## 0.6.1
+
+### Patch Changes
+
+- 0f36826: Reconnect when websocket disconnects
+
+## 0.6.0
+
+### Minor Changes
+
+- e944cb4: Use state store for useRserve hook, instead of useState/useEffect
+
 ## 0.5.0
 
-### Breaking changes
+### Minor Changes
 
-- replace context provider (`<Rserve></Rserve>`) with a hook `useRserve({...})`
+- 3514304: BREAKING CHANGE: replace context provider (`<Rserve></Rserve>`) with a hook `useRserve({...})`
 
 ## 0.4.0
 
