@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.7.0
+
+### Minor Changes
+
+- da82406: Add useWidget hook
+
 ## 0.6.1
 
 ### Patch Changes
