@@ -26,6 +26,7 @@
     "prepublishOnly": "pnpm run build",
     "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
     "ci": "pnpm run lint && pnpm run build",
+    "release": "bun run lint && bun run test && bun run build && changeset publish",
     "changeset": "changeset",
     "compile": "Rscript -e 'RserveTS::ts_compile(\"src/rserve/demo.R\"); RserveTS::ts_deploy(\"src/rserve/demo.R\")'",
     "rserve": "Rscript src/rserve/demo.rserve.R"
