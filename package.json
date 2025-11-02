@@ -23,9 +23,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "vite preview --host",
-    "prepublishOnly": "pnpm run build",
+    "prepublishOnly": "bun run build",
     "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
-    "ci": "pnpm run lint && pnpm run build",
+    "ci": "bun run lint && bun run build",
     "release": "bun run lint && bun run build && changeset publish",
     "changeset": "changeset",
     "compile": "Rscript -e 'RserveTS::ts_compile(\"src/rserve/demo.R\"); RserveTS::ts_deploy(\"src/rserve/demo.R\")'",
@@ -60,10 +60,5 @@
   "dependencies": {
     "rserve-ts": "^0.8.5",
     "zod": "^3.25.67"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   }
 }
