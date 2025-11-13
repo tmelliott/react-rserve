@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.8.0
+
+### Minor Changes
+
+- 9ae2d7f: Enhanced `useWidget` hook with support for child widgets. The hook now properly handles widgets that contain other widgets as children, enabling hierarchical widget structures. The return type now includes a `children` property when child widgets are present.
+
 ## 0.7.0
 
 ### Minor Changes
