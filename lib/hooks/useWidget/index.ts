@@ -33,8 +33,8 @@ type MaybeChildren<C extends Record<string, any>> = keyof Omit<
   : {
       children: {
         [P in Exclude<keyof C, "r_type" | "r_attributes">]: C[P];
-      };
-    };
+  };
+};
 
 type WidgetState<P extends Record<string, any>> = Expand<{
   [K in Exclude<keyof P, "r_type" | "r_attributes">]:
