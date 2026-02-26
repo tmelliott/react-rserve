@@ -1,0 +1,166 @@
+/* Widget Container Styles */
+.widgets-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  background-color: #57534e; /* bg-stone-600 */
+  min-height: 100vh;
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+  color: #121212;
+}
+
+/* Widget Card Styles */
+.widget-card {
+  aspect-ratio: 16 / 9;
+  background-color: #f9fafb; /* bg-gray-50 */
+  border-radius: 0.25rem;
+  padding: 1rem;
+  height: 24rem;
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.widget-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+}
+
+/* Plot Widget Container */
+.plot-widget-container {
+  background-color: #a8a29e; /* bg-stone-400 */
+  border-radius: 0.25rem;
+  padding: 1rem;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 3rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Flex Layout Utilities */
+.flex-row {
+  display: flex;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-end {
+  display: flex;
+  align-items: flex-end;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+/* Input Styles */
+.widget-input {
+  border: 1px solid #d1d5db; /* border-gray-300 */
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.widget-input-small {
+  background-color: white;
+  border: 1px solid #e5e7eb; /* border-gray-200 */
+  border-radius: 0.25rem;
+  padding: 0 0.5rem;
+  width: 7.5rem; /* w-30 */
+  height: 100%;
+}
+
+/* Button Styles */
+.widget-button {
+  padding: 0.25rem 0.75rem;
+  background-color: #e5e7eb; /* bg-gray-200 */
+  border-radius: 0.25rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  cursor: pointer;
+}
+
+.widget-button:hover {
+  background-color: #d1d5db; /* hover:bg-gray-300 */
+}
+
+.widget-button-active {
+  background-color: #d1d5db; /* bg-gray-300 */
+}
+
+.widget-button-wait {
+  cursor: wait;
+}
+
+/* Histogram Bar Styles */
+.histogram-bar {
+  flex: 1;
+  background-color: #9ca3af; /* bg-gray-400 */
+  cursor: pointer;
+}
+
+.histogram-bar:hover {
+  background-color: #6b7280; /* hover:bg-gray-500 */
+}
+
+.histogram-bars-container {
+  display: flex;
+  align-items: flex-end;
+  flex: 1;
+  margin-top: 1rem;
+}
+
+/* Bar Chart Styles */
+.barchart-bar {
+  flex: 1;
+  background-color: #9ca3af; /* bg-gray-400 */
+  transition: all 0.5s ease-in-out;
+  position: relative;
+}
+
+.barchart-label {
+  position: absolute;
+  color: black;
+  bottom: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 1rem;
+}
+
+.barchart-container {
+  display: flex;
+  align-items: flex-end;
+  flex: 1;
+  margin-top: 1rem;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
