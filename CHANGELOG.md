@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.9.0
+
+### Minor Changes
+
+- 9a94033: Adds support for widget methods
+
 ## 0.8.0
 
 ### Minor Changes
