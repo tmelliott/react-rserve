@@ -27,6 +27,19 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
+      # npm OIDC requires Node 22+ and npm 11.5.1+ (bun doesn't support npm OIDC)
+      - name: Setup Node.js & npm for OIDC
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          # Don't set registry-url - it would set token auth, interfering with OIDC
+
+      - name: Update npm & configure for OIDC
+        run: |
+          npm install -g npm@latest
+          npm config set registry https://registry.npmjs.org
+          npm config delete //registry.npmjs.org/:_authToken || true
+
       - name: Install dependencies
         run: bun install
 
