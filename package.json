@@ -28,8 +28,9 @@
     "ci": "bun run lint && bun run build",
     "release": "bun run lint && bun run build && changeset publish",
     "changeset": "changeset",
-    "compile": "Rscript -e 'RserveTS::ts_compile(\"src/rserve/demo.R\"); RserveTS::ts_deploy(\"src/rserve/demo.R\")'",
-    "rserve": "Rscript src/rserve/demo.rserve.R"
+    "compile": "Rscript -e 'RserveTS::ts_compile(\"src/rserve/demo.R\"); RserveTS::ts_deploy(\"src/rserve/demo.R\")' && Rscript -e 'RserveTS::ts_compile(\"src/rserve/widgets.R\"); RserveTS::ts_deploy(\"src/rserve/widgets.R\", port = 6312)'",
+    "rserve": "Rscript src/rserve/demo.rserve.R",
+    "rserve-widgets": "Rscript src/rserve/widgets.rserve.R"
   },
   "peerDependencies": {
     "react": "^19.0.0",
