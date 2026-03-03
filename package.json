@@ -59,7 +59,7 @@
     "vite-plugin-node-polyfills": "^0.24.0"
   },
   "dependencies": {
-    "rserve-ts": "^0.8.5",
+    "rserve-ts": "0.8.7",
     "zod": "^3.25.67"
   }
 }
