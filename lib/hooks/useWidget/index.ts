@@ -7,7 +7,7 @@ type WidgetProperty<T = any, R = any> = {
   set: (x: R) => Promise<void>;
   register: (
     f: (v: T, k: (err: string | null, res: null) => void) => void,
-    id: string
+    id: string,
   ) => Promise<string>;
 };
 
@@ -17,7 +17,7 @@ type ResultType<T extends WidgetProperty> = Parameters<T["set"]>[0];
 export type Widget<
   T extends Record<string, any>,
   C extends Record<string, any>,
-  M extends Record<string, any> = Record<string, never>
+  M extends Record<string, any> = Record<string, never>,
 > = {
   properties: {
     [K in Exclude<keyof T, "r_type" | "r_attributes">]: Expand<
@@ -57,14 +57,14 @@ type WidgetState<P extends Record<string, any>> = Expand<{
 export class WidgetStore<
   T extends Record<string, any>,
   C extends Record<string, any>,
-  M extends Record<string, any> = Record<string, never>
+  M extends Record<string, any> = Record<string, never>,
 > {
   private widget: Widget<T, C, M> | undefined;
   private ctor: (
     f: (
       v: Partial<Expand<WidgetState<T>>>,
-      k: (err: string | null, res: null) => void
-    ) => void
+      k: (err: string | null, res: null) => void,
+    ) => void,
   ) => Promise<Widget<T, C, M>>;
   private status: WidgetStatus = "loading";
   private fields: Widget<T, C, M>["properties"] | undefined;
@@ -90,9 +90,9 @@ export class WidgetStore<
     ctor: (
       f: (
         v: Partial<Expand<WidgetState<T>>>,
-        k: (err: string | null, res: null) => void
-      ) => void
-    ) => Promise<Widget<T, C, M>>
+        k: (err: string | null, res: null) => void,
+      ) => void,
+    ) => Promise<Widget<T, C, M>>,
   ) {
     this.ctor = ctor;
     this.timeoutRefs = {};
@@ -157,7 +157,7 @@ export class WidgetStore<
   set = <P extends Exclude<keyof T, "r_type" | "r_attributes">>(
     prop: P,
     value: ResultType<T[P]>,
-    delay: number = 0
+    delay: number = 0,
   ) => {
     if (this.timeoutRefs[prop as string]) {
       clearTimeout(this.timeoutRefs[prop as string]);
@@ -171,7 +171,7 @@ export class WidgetStore<
   destroy() {
     if (this.timeoutRefs) {
       Object.keys(this.timeoutRefs).map((t) =>
-        clearTimeout(this.timeoutRefs[t])
+        clearTimeout(this.timeoutRefs[t]),
       );
     }
   }
@@ -180,18 +180,20 @@ export class WidgetStore<
 export function useWidget<
   P extends Record<string, any>,
   C extends Record<string, any> = Record<string, never>,
-  M extends Record<string, any> = Record<string, never>
+  M extends Record<string, any> = Record<string, never>,
 >(
   ctor: (
-    f: (
-      v: Partial<Expand<WidgetState<P>>>,
-      k: (err: string | null, res: null) => void
-    ) => void
+    f:
+      | ((
+          v: Partial<Expand<WidgetState<P>>>,
+          k: (err: string | null, res: null) => void,
+        ) => void)
+      | ((v: any, k: (...args: any[]) => void) => void),
   ) => Promise<{
-    properties: P;
+    properties?: P;
     children?: C;
     methods?: M;
-  }>
+  }>,
 ) {
   const storeRef = useRef<WidgetStore<P, C, M>>(undefined);
 
@@ -202,7 +204,7 @@ export function useWidget<
   const state = useSyncExternalStore(
     storeRef.current.subscribe,
     storeRef.current.getSnapshot,
-    storeRef.current.getSnapshot
+    storeRef.current.getSnapshot,
   );
 
   useEffect(() => {
