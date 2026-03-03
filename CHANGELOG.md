@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.9.1
+
+### Patch Changes
+
+- Update rserve-ts dependency
+
 ## 0.9.0
 
 ### Minor Changes
