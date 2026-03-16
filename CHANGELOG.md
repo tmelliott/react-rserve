@@ -1,6 +1,6 @@
 # @tmelliott/react-rserve
 
-## 0.6.2
+## 0.9.2
 
 ### Patch Changes
 
