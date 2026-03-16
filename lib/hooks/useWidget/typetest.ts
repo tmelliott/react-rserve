@@ -24,7 +24,13 @@ type MockWidget = {
     };
   };
   methods: {
-    dispatchAction: { call: (type: string, payload: unknown) => Promise<unknown> };
+    dispatchAction: {
+      call: (
+        action:
+          | { type: "SetValue"; payload: { value: string } }
+          | { type: "ResetValue"; payload: { hard: boolean } }
+      ) => Promise<unknown>;
+    };
     undo: { call: () => Promise<unknown> };
     redo: { call: () => Promise<unknown> };
   };
@@ -68,4 +74,8 @@ export function TypeSurfaceChecks() {
   void undo;
   void redo;
   void set;
+
+  void dispatchAction({ type: "SetValue", payload: { value: "x" } });
+  void dispatchAction({ type: "ResetValue", payload: { hard: true } });
+  void dispatchAction("SetValue", { value: "x" });
 }

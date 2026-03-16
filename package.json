@@ -61,7 +61,7 @@
     "vitest": "^4.1.0"
   },
   "dependencies": {
-    "rserve-ts": "^0.8.5",
+    "rserve-ts": "^0.9.0",
     "zod": "^3.25.67"
   },
   "pnpm": {

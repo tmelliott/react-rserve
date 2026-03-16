@@ -104,6 +104,25 @@ describe("WidgetStore action capabilities", () => {
     warnSpy.mockRestore();
   });
 
+  it("dispatchAction forwards object-form action", async () => {
+    const dispatchSpy = vi.fn().mockResolvedValue(null);
+    const ctor = async () => ({
+      properties: { value: createProp("x") },
+      methods: {
+        dispatchAction: { call: dispatchSpy },
+      },
+    });
+
+    const store = new WidgetStore(ctor as any);
+    await waitUntilReady(store);
+    await store.dispatchAction({ type: "SetValue", payload: { value: "z" } });
+
+    expect(dispatchSpy).toHaveBeenCalledWith({
+      type: "SetValue",
+      payload: { value: "z" },
+    });
+  });
+
   it("warn mode warns but forwards unknown action types", async () => {
     const dispatchSpy = vi.fn().mockResolvedValue(null);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});

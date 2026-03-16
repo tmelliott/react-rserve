@@ -32,14 +32,44 @@ export type WidgetActionState = WidgetCapabilities["actions"] & {
 
 type WidgetMethods = Record<string, { call: (...args: any[]) => Promise<unknown> }>;
 
-export type Widget<T extends Record<string, any>> = {
+type DispatchActionObject = {
+  type: string;
+  payload: unknown;
+};
+
+type DispatchActionFromMethod<D> = NonNullable<D> extends (
+  action: infer A,
+  ...args: any[]
+) => Promise<unknown>
+  ? A
+  : NonNullable<D> extends {
+        call: (action: infer A, ...args: any[]) => Promise<unknown>;
+      }
+    ? A
+    : DispatchActionObject;
+
+type DispatchActionInput<M extends WidgetMethods> = NonNullable<M> extends {
+  dispatchAction?: infer D;
+}
+  ? DispatchActionFromMethod<D>
+  : DispatchActionObject;
+
+export type DispatchActionFn<M extends WidgetMethods> = {
+  (action: DispatchActionInput<M>): Promise<unknown>;
+  (type: string, payload: unknown): Promise<unknown>;
+};
+
+export type Widget<
+  T extends Record<string, any>,
+  M extends WidgetMethods = WidgetMethods,
+> = {
   properties: {
     [K in Exclude<keyof T, "r_type" | "r_attributes">]: Expand<
       WidgetProperty<PropType<T[K]>, ResultType<T[K]>>
     >;
   };
   children?: Record<string, unknown>;
-  methods?: WidgetMethods;
+  methods?: M;
   capabilities?: WidgetCapabilities;
 };
 
@@ -48,17 +78,20 @@ type WidgetState<P extends Record<string, any>> = Expand<{
     | Parameters<P[K]["set"]>[0];
 }>;
 
-export class WidgetStore<T extends Record<string, any>> {
-  private widget: Widget<T> | undefined;
+export class WidgetStore<
+  T extends Record<string, any>,
+  M extends WidgetMethods = WidgetMethods,
+> {
+  private widget: Widget<T, M> | undefined;
   private ctor: (
     f: (
       v: Partial<Expand<WidgetState<T>>>,
       k: (err: string | null, res: null) => void
     ) => void
-  ) => Promise<Widget<T>>;
+  ) => Promise<Widget<T, M>>;
   private status: WidgetStatus = "loading";
-  private fields: Widget<T>["properties"] | undefined;
-  private methods: WidgetMethods | undefined;
+  private fields: Widget<T, M>["properties"] | undefined;
+  private methods: M | undefined;
   private capabilities: WidgetCapabilities | undefined;
   private actionState: WidgetActionState | undefined;
   private state: WidgetState<T> | undefined;
@@ -69,10 +102,10 @@ export class WidgetStore<T extends Record<string, any>> {
   private listeners = new Set<() => void>();
 
   private snapshot: {
-    widget: Widget<T> | undefined;
+    widget: Widget<T, M> | undefined;
     status: WidgetStatus;
     fields: Widget<T>["properties"] | undefined;
-    methods: WidgetMethods | undefined;
+    methods: M | undefined;
     capabilities: WidgetCapabilities | undefined;
     actionState: WidgetActionState | undefined;
     state: WidgetState<T> | undefined;
@@ -84,7 +117,7 @@ export class WidgetStore<T extends Record<string, any>> {
         v: Partial<Expand<WidgetState<T>>>,
         k: (err: string | null, res: null) => void
       ) => void
-    ) => Promise<Widget<T>>
+    ) => Promise<Widget<T, M>>
   ) {
     this.ctor = ctor;
     this.timeoutRefs = {};
@@ -172,15 +205,35 @@ export class WidgetStore<T extends Record<string, any>> {
     }, delay);
   };
 
-  dispatchAction = async (type: string, payload: unknown) => {
+  dispatchAction = async (actionOrType: unknown, payloadArg?: unknown) => {
+    let action: DispatchActionObject | undefined;
+    let actionType = "";
+
+    if (
+      typeof actionOrType === "object" &&
+      actionOrType !== null &&
+      "type" in actionOrType &&
+      typeof (actionOrType as { type: unknown }).type === "string"
+    ) {
+      actionType = (actionOrType as { type: string }).type;
+      action = actionOrType as DispatchActionObject;
+    } else if (typeof actionOrType === "string") {
+      actionType = actionOrType;
+      action = { type: actionType, payload: payloadArg };
+    } else {
+      throw new Error(
+        "[react-rserve] dispatchAction expects either (actionObject) or (type, payload)."
+      );
+    }
+
     const actionCaps = this.capabilities?.actions;
     const declaredTypes = actionCaps?.types ?? [];
     const strictness = actionCaps?.strict ?? "off";
     const hasDeclaredTypes = declaredTypes.length > 0;
-    const isUnknownType = hasDeclaredTypes && !declaredTypes.includes(type);
+    const isUnknownType = hasDeclaredTypes && !declaredTypes.includes(actionType);
 
     if (isUnknownType) {
-      const msg = `[react-rserve] dispatchAction('${type}') is not in declared capabilities.actions.types: [${declaredTypes.join(
+      const msg = `[react-rserve] dispatchAction('${actionType}') is not in declared capabilities.actions.types: [${declaredTypes.join(
         ", "
       )}]`;
       if (strictness === "strict") {
@@ -193,10 +246,21 @@ export class WidgetStore<T extends Record<string, any>> {
 
     const fn = this.methods?.dispatchAction;
     if (fn?.call) {
-      return fn.call(type, payload);
+      if (typeof actionOrType === "string") {
+        try {
+          return await fn.call(actionType, payloadArg);
+        } catch {
+          return fn.call(action);
+        }
+      }
+      try {
+        return await fn.call(action);
+      } catch {
+        return fn.call(actionType, action.payload);
+      }
     }
     console.warn(
-      `[react-rserve] dispatchAction('${type}') requested but widget has no dispatchAction method.`
+      `[react-rserve] dispatchAction('${actionType}') requested but widget has no dispatchAction method.`
     );
     return undefined;
   };
@@ -247,7 +311,10 @@ export class WidgetStore<T extends Record<string, any>> {
   }
 }
 
-export function useWidget<P extends Record<string, any>>(
+export function useWidget<
+  P extends Record<string, any>,
+  M extends WidgetMethods = WidgetMethods,
+>(
   ctor: (
     f: (
       v: Partial<Expand<WidgetState<P>>>,
@@ -256,11 +323,11 @@ export function useWidget<P extends Record<string, any>>(
   ) => Promise<{
     properties: P;
     children?: Record<string, unknown>;
-    methods?: WidgetMethods;
+    methods?: M;
     capabilities?: WidgetCapabilities;
   }>
 ) {
-  const storeRef = useRef<WidgetStore<P>>(undefined);
+  const storeRef = useRef<WidgetStore<P, M>>(undefined);
 
   if (!storeRef.current) {
     storeRef.current = new WidgetStore(ctor);
@@ -281,7 +348,7 @@ export function useWidget<P extends Record<string, any>>(
   return {
     ...state,
     set: storeRef.current.set,
-    dispatchAction: storeRef.current.dispatchAction,
+    dispatchAction: storeRef.current.dispatchAction as DispatchActionFn<M>,
     undo: storeRef.current.undo,
     redo: storeRef.current.redo,
   };
