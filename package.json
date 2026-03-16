@@ -1,10 +1,10 @@
 {
   "name": "@tmelliott/react-rserve",
   "private": false,
-  "version": "0.9.1",
+  "version": "0.6.1",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tmelliott/react-rserve.git"
+    "url": "https://github.com/tmelliott/react-rserve"
   },
   "keywords": [
     "react",
@@ -20,17 +20,18 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b ./tsconfig.lib.json && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:types": "tsc --noEmit -p tsconfig.lib.json",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "vite preview --host",
-    "prepublishOnly": "bun run build",
+    "prepublishOnly": "pnpm run build",
     "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
-    "ci": "bun run lint && bun run build",
-    "release": "bun run lint && bun run build && changeset publish",
+    "ci": "pnpm run lint && pnpm run build",
     "changeset": "changeset",
-    "compile": "Rscript -e 'RserveTS::ts_compile(\"src/rserve/demo.R\"); RserveTS::ts_deploy(\"src/rserve/demo.R\")' && Rscript -e 'RserveTS::ts_compile(\"src/rserve/widgets.R\"); RserveTS::ts_deploy(\"src/rserve/widgets.R\", port = 6312)'",
-    "rserve": "Rscript src/rserve/demo.rserve.R",
-    "rserve-widgets": "Rscript src/rserve/widgets.rserve.R"
+    "compile": "Rscript -e 'RserveTS::ts_compile(\"src/rserve/demo.R\"); RserveTS::ts_deploy(\"src/rserve/demo.R\")'",
+    "rserve": "Rscript src/rserve/demo.rserve.R"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -50,16 +51,22 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "glob": "^11.0.1",
     "globals": "^15.15.0",
-    "react": "^19.0.1",
-    "react-dom": "^19.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.34.0",
     "vite": "^6.1.1",
     "vite-plugin-dts": "^4.5.0",
-    "vite-plugin-node-polyfills": "^0.24.0"
+    "vite-plugin-node-polyfills": "^0.24.0",
+    "vitest": "^4.1.0"
   },
   "dependencies": {
-    "rserve-ts": "0.8.7",
+    "rserve-ts": "0.9.1",
     "zod": "^3.25.67"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
