@@ -1,5 +1,13 @@
 # @tmelliott/react-rserve
 
+## 0.6.2
+
+### Patch Changes
+
+- 169adf4: Fix test discovery to ignore built artifacts in `dist`.
+
+  This prevents Vitest from executing compiled test files outside the test runner context, which caused CI failures in `npm test`.
+
 ## 0.9.1
 
 ### Patch Changes
