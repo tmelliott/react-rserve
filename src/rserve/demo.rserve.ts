@@ -19,10 +19,14 @@ export type TIterate = z.infer<typeof iterate>;
 export type TSample_num = z.infer<typeof sample_num>;
 
 
-export default {
+export const demoAppSchema = {
   bad_fn,
   fn_first,
   fn_mean,
   iterate,
   sample_num
-};
+} satisfies z.ZodRawShape;
+
+export type TDemoApp = z.infer<z.ZodObject<typeof demoAppSchema, "strip">>;
+
+export default demoAppSchema;
