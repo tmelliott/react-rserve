@@ -43,6 +43,22 @@ declare const widgetCtor: (
   ) => void
 ) => Promise<MockWidget>;
 
+type MockWidgetTypePayload = {
+  properties: {
+    value: MockProp<string>;
+  };
+  methods: {
+    dispatchAction: (type: string, payload: { value: string }) => Promise<unknown>;
+  };
+};
+
+declare const widgetCtorTypePayload: (
+  f: (
+    v: { value?: string },
+    k: (err: string | null, res: null) => void
+  ) => void
+) => Promise<MockWidgetTypePayload>;
+
 export function TypeSurfaceChecks() {
   const {
     actionState,
@@ -78,4 +94,11 @@ export function TypeSurfaceChecks() {
   void dispatchAction({ type: "SetValue", payload: { value: "x" } });
   void dispatchAction({ type: "ResetValue", payload: { hard: true } });
   void dispatchAction("SetValue", { value: "x" });
+}
+
+export function TypeSurfaceChecksTypePayload() {
+  const { dispatchAction } = useWidget(widgetCtorTypePayload);
+
+  void dispatchAction("SetValue", { value: "x" });
+  void dispatchAction({ type: "SetValue", payload: { value: "x" } });
 }

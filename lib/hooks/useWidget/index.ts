@@ -30,7 +30,10 @@ export type WidgetActionState = WidgetCapabilities["actions"] & {
   actionCount: number;
 };
 
-type WidgetMethods = Record<string, { call: (...args: any[]) => Promise<unknown> }>;
+type WidgetMethodValue =
+  | ((...args: any[]) => Promise<unknown>)
+  | { call: (...args: any[]) => Promise<unknown> };
+type WidgetMethods = Record<string, WidgetMethodValue | unknown>;
 
 type DispatchActionObject = {
   type: string;
@@ -41,12 +44,36 @@ type DispatchActionFromMethod<D> = NonNullable<D> extends (
   action: infer A,
   ...args: any[]
 ) => Promise<unknown>
-  ? A
+  ? A extends { type: string }
+    ? A
+    : DispatchActionObject
   : NonNullable<D> extends {
         call: (action: infer A, ...args: any[]) => Promise<unknown>;
       }
-    ? A
+    ? A extends { type: string }
+      ? A
+      : DispatchActionObject
     : DispatchActionObject;
+
+type DispatchActionTypePayloadArgs<D> = NonNullable<D> extends (
+  type: infer T,
+  payload: infer P,
+  ...args: any[]
+) => Promise<unknown>
+  ? T extends string
+    ? [type: T, payload: P]
+    : [type: string, payload: unknown]
+  : NonNullable<D> extends {
+        call: (
+          type: infer T,
+          payload: infer P,
+          ...args: any[]
+        ) => Promise<unknown>;
+      }
+    ? T extends string
+      ? [type: T, payload: P]
+      : [type: string, payload: unknown]
+    : [type: string, payload: unknown];
 
 type DispatchActionInput<M extends WidgetMethods> = NonNullable<M> extends {
   dispatchAction?: infer D;
@@ -56,7 +83,11 @@ type DispatchActionInput<M extends WidgetMethods> = NonNullable<M> extends {
 
 export type DispatchActionFn<M extends WidgetMethods> = {
   (action: DispatchActionInput<M>): Promise<unknown>;
-  (type: string, payload: unknown): Promise<unknown>;
+  (
+    ...args: DispatchActionTypePayloadArgs<
+      NonNullable<M> extends { dispatchAction?: infer D } ? D : never
+    >
+  ): Promise<unknown>;
 };
 
 export type Widget<
@@ -77,6 +108,29 @@ type WidgetState<P extends Record<string, any>> = Expand<{
   [K in Exclude<keyof P, "r_type" | "r_attributes">]:
     | Parameters<P[K]["set"]>[0];
 }>;
+
+function invokeWidgetMethod(
+  fn: unknown,
+  methodName: string,
+  ...args: unknown[]
+): Promise<unknown> | undefined {
+  if (fn == null) return undefined;
+  if (typeof fn === "function") {
+    return fn(...args);
+  }
+  if (
+    typeof fn === "object" &&
+    fn !== null &&
+    "call" in fn &&
+    typeof (fn as { call?: unknown }).call === "function"
+  ) {
+    return (fn as { call: (...a: unknown[]) => Promise<unknown> }).call(...args);
+  }
+  console.warn(
+    `[react-rserve] ${methodName} exists but is not callable (expected function or { call }).`
+  );
+  return undefined;
+}
 
 export class WidgetStore<
   T extends Record<string, any>,
@@ -105,6 +159,7 @@ export class WidgetStore<
     widget: Widget<T, M> | undefined;
     status: WidgetStatus;
     fields: Widget<T>["properties"] | undefined;
+    children: Widget<T>["children"] | undefined;
     methods: M | undefined;
     capabilities: WidgetCapabilities | undefined;
     actionState: WidgetActionState | undefined;
@@ -125,6 +180,7 @@ export class WidgetStore<
       widget: this.widget,
       status: this.status,
       fields: this.fields,
+      children: undefined,
       methods: this.methods,
       capabilities: this.capabilities,
       actionState: this.actionState,
@@ -169,6 +225,7 @@ export class WidgetStore<
     this.snapshot = {
       widget: this.widget,
       fields: this.widget?.properties,
+      children: this.widget?.children,
       methods: this.methods,
       capabilities: this.capabilities,
       actionState: this.actionState,
@@ -245,46 +302,38 @@ export class WidgetStore<
     }
 
     const fn = this.methods?.dispatchAction;
-    if (fn?.call) {
-      if (typeof actionOrType === "string") {
-        try {
-          return await fn.call(actionType, payloadArg);
-        } catch {
-          return fn.call(action);
-        }
-      }
-      try {
-        return await fn.call(action);
-      } catch {
-        return fn.call(actionType, action.payload);
-      }
+    if (fn == null) {
+      console.warn(
+        `[react-rserve] dispatchAction('${actionType}') requested but widget has no dispatchAction method.`
+      );
+      return undefined;
     }
-    console.warn(
-      `[react-rserve] dispatchAction('${actionType}') requested but widget has no dispatchAction method.`
-    );
-    return undefined;
+    if (typeof actionOrType === "string") {
+      return invokeWidgetMethod(fn, "dispatchAction", actionType, payloadArg);
+    }
+    return invokeWidgetMethod(fn, "dispatchAction", action);
   };
 
   undo = async () => {
     const fn = this.methods?.undo;
-    if (fn?.call) {
-      return fn.call();
+    if (fn == null) {
+      console.warn(
+        "[react-rserve] undo() requested but widget has no undo method."
+      );
+      return undefined;
     }
-    console.warn(
-      "[react-rserve] undo() requested but widget has no undo method."
-    );
-    return undefined;
+    return invokeWidgetMethod(fn, "undo");
   };
 
   redo = async () => {
     const fn = this.methods?.redo;
-    if (fn?.call) {
-      return fn.call();
+    if (fn == null) {
+      console.warn(
+        "[react-rserve] redo() requested but widget has no redo method."
+      );
+      return undefined;
     }
-    console.warn(
-      "[react-rserve] redo() requested but widget has no redo method."
-    );
-    return undefined;
+    return invokeWidgetMethod(fn, "redo");
   };
 
   private toActionState(

@@ -30,7 +30,12 @@ export default defineConfig({
       input: Object.fromEntries(
         glob
           .sync("lib/**/*.{ts,tsx}", {
-            ignore: ["lib/**/*.d.ts"],
+            ignore: [
+              "lib/**/*.d.ts",
+              "lib/**/*.test.ts",
+              "lib/**/*.test.tsx",
+              "lib/**/typetest.ts",
+            ],
           })
           .map((file) => [
             // The name of the entry point
