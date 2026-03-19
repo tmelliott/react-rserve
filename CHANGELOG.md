@@ -1,5 +1,13 @@
 # @tmelliott/react-rserve
 
+## 0.9.3
+
+### Patch Changes
+
+- ca761bc: Harden `useWidget` method invocation by supporting both function-shaped methods and `{ call }` wrappers without fallback retries based on caught errors.
+
+  Expose widget `children` in hook snapshots for nested widget rendering, improve `dispatchAction` type inference for `(type, payload)` signatures, and add colocated regression tests while excluding test/typecheck files from library build entries.
+
 ## 0.9.2
 
 ### Patch Changes
