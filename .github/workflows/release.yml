@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -29,7 +29,7 @@ jobs:
 
       # npm OIDC requires Node 22+ and npm 11.5.1+ (bun doesn't support npm OIDC)
       - name: Setup Node.js & npm for OIDC
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
           # Don't set registry-url - it would set token auth, interfering with OIDC
