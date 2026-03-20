@@ -109,6 +109,34 @@ type WidgetState<P extends Record<string, any>> = Expand<{
     | Parameters<P[K]["set"]>[0];
 }>;
 
+type UseWidgetSnapshot<
+  P extends Record<string, any>,
+  M extends WidgetMethods = WidgetMethods,
+> = {
+  widget: Widget<P, M> | undefined;
+  status: WidgetStatus;
+  fields: Widget<P, M>["properties"] | undefined;
+  children: Widget<P, M>["children"] | undefined;
+  methods: M | undefined;
+  capabilities: WidgetCapabilities | undefined;
+  actionState: WidgetActionState | undefined;
+  state: WidgetState<P> | undefined;
+};
+
+export type UseWidgetReturn<
+  P extends Record<string, any>,
+  M extends WidgetMethods = WidgetMethods,
+> = UseWidgetSnapshot<P, M> & {
+  set: <K extends Exclude<keyof P, "r_type" | "r_attributes">>(
+    prop: K,
+    value: ResultType<P[K]>,
+    delay?: number
+  ) => void;
+  dispatchAction: DispatchActionFn<M>;
+  undo: () => Promise<unknown>;
+  redo: () => Promise<unknown>;
+};
+
 function invokeWidgetMethod(
   fn: unknown,
   methodName: string,
@@ -375,14 +403,14 @@ export function useWidget<
     methods?: M;
     capabilities?: WidgetCapabilities;
   }>
-) {
+): UseWidgetReturn<P, M> {
   const storeRef = useRef<WidgetStore<P, M>>(undefined);
 
   if (!storeRef.current) {
     storeRef.current = new WidgetStore(ctor);
   }
 
-  const state = useSyncExternalStore(
+  const state: UseWidgetSnapshot<P, M> = useSyncExternalStore(
     storeRef.current.subscribe,
     storeRef.current.getSnapshot,
     storeRef.current.getSnapshot
