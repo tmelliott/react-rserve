@@ -35,6 +35,7 @@ export default defineConfig({
               "lib/**/*.test.ts",
               "lib/**/*.test.tsx",
               "lib/**/typetest.ts",
+              "lib/**/mre/**",
             ],
           })
           .map((file) => [

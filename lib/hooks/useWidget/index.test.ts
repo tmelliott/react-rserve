@@ -218,4 +218,25 @@ describe("WidgetStore action capabilities", () => {
     expect(dispatchSpy).toHaveBeenCalledWith("UnknownAction", { value: "z" });
     warnSpy.mockRestore();
   });
+
+  it("normalizes generated-like capabilities shape", async () => {
+    const ctor = async () => ({
+      properties: { value: createProp("x") },
+      capabilities: {
+        actions: {
+          enabled: "yes",
+          types: ["SetValue", 123, null],
+          strict: "something-unexpected",
+        },
+      },
+    });
+
+    const store = new WidgetStore(ctor as any);
+    await waitUntilReady(store);
+    const snapshot = store.getSnapshot();
+
+    expect(snapshot.capabilities?.actions.enabled).toBe(false);
+    expect(snapshot.capabilities?.actions.types).toEqual(["SetValue"]);
+    expect(snapshot.capabilities?.actions.strict).toBe("off");
+  });
 });

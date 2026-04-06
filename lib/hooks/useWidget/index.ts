@@ -24,6 +24,14 @@ export type WidgetCapabilities = {
   };
 };
 
+type RawWidgetCapabilities = {
+  actions?: {
+    enabled?: unknown;
+    types?: unknown;
+    strict?: unknown;
+  };
+};
+
 export type WidgetActionState = WidgetCapabilities["actions"] & {
   canUndo: boolean;
   canRedo: boolean;
@@ -93,15 +101,27 @@ export type DispatchActionFn<M extends WidgetMethods> = {
 export type Widget<
   T extends Record<string, any>,
   M extends WidgetMethods = WidgetMethods,
+  C = unknown,
 > = {
   properties: {
     [K in Exclude<keyof T, "r_type" | "r_attributes">]: Expand<
       WidgetProperty<PropType<T[K]>, ResultType<T[K]>>
     >;
   };
-  children?: Record<string, unknown>;
+  children?: C;
   methods?: M;
   capabilities?: WidgetCapabilities;
+};
+
+type WidgetCtorResult<
+  T extends Record<string, any>,
+  M extends WidgetMethods = WidgetMethods,
+  C = unknown,
+> = {
+  properties: T;
+  children?: C;
+  methods?: M;
+  capabilities?: RawWidgetCapabilities | WidgetCapabilities | unknown;
 };
 
 type WidgetState<P extends Record<string, any>> = Expand<{
@@ -112,11 +132,12 @@ type WidgetState<P extends Record<string, any>> = Expand<{
 type UseWidgetSnapshot<
   P extends Record<string, any>,
   M extends WidgetMethods = WidgetMethods,
+  C = unknown,
 > = {
-  widget: Widget<P, M> | undefined;
+  widget: Widget<P, M, C> | undefined;
   status: WidgetStatus;
-  fields: Widget<P, M>["properties"] | undefined;
-  children: Widget<P, M>["children"] | undefined;
+  fields: Widget<P, M, C>["properties"] | undefined;
+  children: Widget<P, M, C>["children"] | undefined;
   methods: M | undefined;
   capabilities: WidgetCapabilities | undefined;
   actionState: WidgetActionState | undefined;
@@ -126,7 +147,8 @@ type UseWidgetSnapshot<
 export type UseWidgetReturn<
   P extends Record<string, any>,
   M extends WidgetMethods = WidgetMethods,
-> = UseWidgetSnapshot<P, M> & {
+  C = unknown,
+> = UseWidgetSnapshot<P, M, C> & {
   set: <K extends Exclude<keyof P, "r_type" | "r_attributes">>(
     prop: K,
     value: ResultType<P[K]>,
@@ -160,19 +182,45 @@ function invokeWidgetMethod(
   return undefined;
 }
 
+function normalizeCapabilities(raw: unknown): WidgetCapabilities | undefined {
+  if (typeof raw !== "object" || raw === null) {
+    return undefined;
+  }
+  const actions = (raw as RawWidgetCapabilities).actions;
+  if (typeof actions !== "object" || actions === null) {
+    return undefined;
+  }
+
+  const strictRaw = String(actions.strict ?? "off");
+  const strict: ActionStrictness =
+    strictRaw === "warn" || strictRaw === "strict" ? strictRaw : "off";
+  const types = Array.isArray(actions.types)
+    ? actions.types.filter((x): x is string => typeof x === "string")
+    : [];
+
+  return {
+    actions: {
+      enabled: typeof actions.enabled === "boolean" ? actions.enabled : false,
+      types,
+      strict,
+    },
+  };
+}
+
 export class WidgetStore<
   T extends Record<string, any>,
   M extends WidgetMethods = WidgetMethods,
+  C = unknown,
 > {
-  private widget: Widget<T, M> | undefined;
+  private widget: Widget<T, M, C> | undefined;
   private ctor: (
     f: (
       v: Partial<Expand<WidgetState<T>>>,
       k: (err: string | null, res: null) => void
     ) => void
-  ) => Promise<Widget<T, M>>;
+  ) => Promise<WidgetCtorResult<T, M, C>>;
   private status: WidgetStatus = "loading";
-  private fields: Widget<T, M>["properties"] | undefined;
+  private fields: Widget<T, M, C>["properties"] | undefined;
   private methods: M | undefined;
   private capabilities: WidgetCapabilities | undefined;
   private actionState: WidgetActionState | undefined;
@@ -184,10 +232,10 @@ export class WidgetStore<
   private listeners = new Set<() => void>();
 
   private snapshot: {
-    widget: Widget<T, M> | undefined;
+    widget: Widget<T, M, C> | undefined;
     status: WidgetStatus;
-    fields: Widget<T>["properties"] | undefined;
-    children: Widget<T>["children"] | undefined;
+    fields: Widget<T, M, C>["properties"] | undefined;
+    children: Widget<T, M, C>["children"] | undefined;
     methods: M | undefined;
     capabilities: WidgetCapabilities | undefined;
     actionState: WidgetActionState | undefined;
@@ -200,7 +248,7 @@ export class WidgetStore<
         v: Partial<Expand<WidgetState<T>>>,
         k: (err: string | null, res: null) => void
       ) => void
-    ) => Promise<Widget<T, M>>
+    ) => Promise<WidgetCtorResult<T, M, C>>
   ) {
     this.ctor = ctor;
     this.timeoutRefs = {};
@@ -230,11 +278,15 @@ export class WidgetStore<
       this.updateState(v as any);
       k(null, null);
     });
-    this.widget = widget;
+    const capabilities = normalizeCapabilities(widget.capabilities);
+    this.widget = {
+      ...widget,
+      capabilities,
+    };
     this.fields = widget.properties;
     this.methods = widget.methods;
-    this.capabilities = widget.capabilities;
-    this.actionState = this.toActionState(widget.capabilities);
+    this.capabilities = capabilities;
+    this.actionState = this.toActionState(capabilities);
     this.status = "ready";
 
     this.updateSnapshot();
@@ -391,6 +443,7 @@ export class WidgetStore<
 export function useWidget<
   P extends Record<string, any>,
   M extends WidgetMethods = WidgetMethods,
+  C = unknown,
 >(
   ctor: (
     f: (
@@ -399,18 +452,18 @@ export function useWidget<
     ) => void
   ) => Promise<{
     properties: P;
-    children?: Record<string, unknown>;
+    children?: C;
     methods?: M;
-    capabilities?: WidgetCapabilities;
+    capabilities?: RawWidgetCapabilities | WidgetCapabilities | unknown;
   }>
-): UseWidgetReturn<P, M> {
-  const storeRef = useRef<WidgetStore<P, M>>(undefined);
+): UseWidgetReturn<P, M, C> {
+  const storeRef = useRef<WidgetStore<P, M, C>>(undefined);
 
   if (!storeRef.current) {
     storeRef.current = new WidgetStore(ctor);
   }
 
-  const state: UseWidgetSnapshot<P, M> = useSyncExternalStore(
+  const state: UseWidgetSnapshot<P, M, C> = useSyncExternalStore(
     storeRef.current.subscribe,
     storeRef.current.getSnapshot,
     storeRef.current.getSnapshot
