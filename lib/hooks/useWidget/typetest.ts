@@ -102,3 +102,44 @@ export function TypeSurfaceChecksTypePayload() {
   void dispatchAction("SetValue", { value: "x" });
   void dispatchAction({ type: "SetValue", payload: { value: "x" } });
 }
+
+type GeneratedLikeWidgetCtor = (
+  f: (
+    v: Partial<{ name: string }>,
+    k: (err: string | null, res: null) => void
+  ) => void
+) => Promise<{
+  properties: {
+    name: MockProp<string>;
+  };
+  children:
+    | (unknown[] & { r_type: "vector"; r_attributes: Record<string, unknown> })
+    | (Record<string, unknown> & {
+        r_type: "vector";
+        r_attributes: { names: string[] } & Record<string, unknown>;
+      });
+  capabilities: {
+    actions: {
+      enabled: boolean;
+      types: string[];
+      strict: string;
+    };
+  };
+  methods: {
+    dispatchAction: (
+      action: { type: "SetName"; payload: { name: string } }
+    ) => Promise<unknown>;
+  };
+}>;
+
+declare const generatedLikeWidget: GeneratedLikeWidgetCtor;
+
+export function TypeGeneratedCtorCompatibility() {
+  const { capabilities, dispatchAction } = useWidget(generatedLikeWidget);
+
+  if (capabilities) {
+    void (capabilities.actions.strict satisfies "off" | "warn" | "strict");
+  }
+
+  void dispatchAction({ type: "SetName", payload: { name: "example" } });
+}
