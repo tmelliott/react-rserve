@@ -1,4 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import type { z } from "zod";
 
 export type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
 
@@ -32,75 +33,14 @@ type RawWidgetCapabilities = {
   };
 };
 
-export type WidgetActionState = WidgetCapabilities["actions"] & {
-  canUndo: boolean;
-  canRedo: boolean;
-  actionCount: number;
-};
-
 type WidgetMethodValue =
   | ((...args: any[]) => Promise<unknown>)
   | { call: (...args: any[]) => Promise<unknown> };
 type WidgetMethods = Record<string, WidgetMethodValue | unknown>;
 
-type DispatchActionObject = {
-  type: string;
-  payload: unknown;
-};
-
-type DispatchActionFromMethod<D> = NonNullable<D> extends (
-  action: infer A,
-  ...args: any[]
-) => Promise<unknown>
-  ? A extends { type: string }
-    ? A
-    : DispatchActionObject
-  : NonNullable<D> extends {
-        call: (action: infer A, ...args: any[]) => Promise<unknown>;
-      }
-    ? A extends { type: string }
-      ? A
-      : DispatchActionObject
-    : DispatchActionObject;
-
-type DispatchActionTypePayloadArgs<D> = NonNullable<D> extends (
-  type: infer T,
-  payload: infer P,
-  ...args: any[]
-) => Promise<unknown>
-  ? T extends string
-    ? [type: T, payload: P]
-    : [type: string, payload: unknown]
-  : NonNullable<D> extends {
-        call: (
-          type: infer T,
-          payload: infer P,
-          ...args: any[]
-        ) => Promise<unknown>;
-      }
-    ? T extends string
-      ? [type: T, payload: P]
-      : [type: string, payload: unknown]
-    : [type: string, payload: unknown];
-
-type DispatchActionInput<M extends WidgetMethods> = NonNullable<M> extends {
-  dispatchAction?: infer D;
-}
-  ? DispatchActionFromMethod<D>
-  : DispatchActionObject;
-
-export type DispatchActionFn<M extends WidgetMethods> = {
-  (action: DispatchActionInput<M>): Promise<unknown>;
-  (
-    ...args: DispatchActionTypePayloadArgs<
-      NonNullable<M> extends { dispatchAction?: infer D } ? D : never
-    >
-  ): Promise<unknown>;
-};
-
 export type Widget<
   T extends Record<string, any>,
-  M extends WidgetMethods = WidgetMethods,
+  M extends object = WidgetMethods,
   C = unknown,
 > = {
   properties: {
@@ -115,7 +55,7 @@ export type Widget<
 
 type WidgetCtorResult<
   T extends Record<string, any>,
-  M extends WidgetMethods = WidgetMethods,
+  M extends object = WidgetMethods,
   C = unknown,
 > = {
   properties: T;
@@ -124,29 +64,110 @@ type WidgetCtorResult<
   capabilities?: RawWidgetCapabilities | WidgetCapabilities | unknown;
 };
 
+/**
+ * Infer `properties` from the awaited widget. Do not use `infer P extends Record<string, any>`
+ * on the same conditional: rserve-ts `Robj.list()` infers `properties` as an intersection
+ * (`{ dsInfo: … } & { r_type; r_attributes }`) that often fails that constraint, so the
+ * branch is skipped and `P` becomes `Record<string, never>` — collapsing `state` to
+ * `{ [x: string]: never }` in the IDE.
+ */
+type InferWidgetProperties<R> = R extends {
+  properties: infer P;
+}
+  ? P extends Record<string, any>
+    ? P
+    : P extends object
+      ? P
+      : Record<string, never>
+  : Record<string, never>;
+
+type InferWidgetChildren<R> = R extends { children?: infer C } ? C : unknown;
+
+/**
+ * ts_compile represents empty R `methods = list()` as a vector/array-shaped type,
+ * not as `WidgetMethods`. Named method objects do *not* satisfy `M extends WidgetMethods`
+ * (no string index signature), so we must not use that check to decide when to widen.
+ *
+ * Do not intersect with `WidgetMethods` here: that adds a string index signature and
+ * degrades IntelliSense for concrete keys like `load_dataset`.
+ *
+ * rserve-ts `Robj.list({ ... })` is typed as `VectorObject`: every named list includes
+ * `r_type: "vector"`, so we must not treat “has r_type vector” as empty. Empty compiled
+ * lists are either (a) open `Record`/`string` keys plus metadata, or (b) metadata only.
+ */
+type RListMetadataKeys = "r_type" | "r_attributes";
+
+/**
+ * UI-facing shapes: strip rserve-ts list/vector `r_type` / `r_attributes` at every
+ * object level (state from `get()`, methods bag, nested values, arrays).
+ */
+type StripRMetadata<T> = [T] extends [never]
+  ? never
+  : T extends string | number | boolean | bigint | symbol | null | undefined
+    ? T
+    : T extends (...args: any) => any
+      ? T
+      : T extends Date | RegExp | File | Blob
+        ? T
+        : T extends ReadonlyArray<infer U>
+          ? ReadonlyArray<StripRMetadata<U>>
+          : T extends Array<infer U>
+            ? Array<StripRMetadata<U>>
+            : T extends object
+              ? Expand<{
+                  [K in keyof Omit<T, RListMetadataKeys>]: StripRMetadata<
+                    Omit<T, RListMetadataKeys>[K]
+                  >;
+                }>
+              : T;
+
+type IsCompiledEmptyRListMethods<M> = [M] extends [never]
+  ? true
+  : unknown extends M
+    ? true
+    : M extends ReadonlyArray<unknown>
+      ? true
+      : M extends { readonly r_type: "vector" }
+        ? Exclude<keyof M, RListMetadataKeys> extends never
+          ? true
+          : string extends keyof M
+            ? true
+            : false
+        : false;
+
+/** When `R` has no `methods` field, `infer M` is `undefined`; default to `WidgetMethods`. */
+type InferWidgetMethods<R> = R extends { methods?: infer M }
+  ? [M] extends [undefined]
+    ? WidgetMethods
+    : IsCompiledEmptyRListMethods<M> extends true
+      ? WidgetMethods
+      : M
+  : WidgetMethods;
+
+/** Current widget values as returned by each property `get()` (matches UI + R pushes). */
 type WidgetState<P extends Record<string, any>> = Expand<{
-  [K in Exclude<keyof P, "r_type" | "r_attributes">]:
-    | Parameters<P[K]["set"]>[0];
+  [K in Exclude<keyof P, RListMetadataKeys>]: StripRMetadata<
+    Awaited<ReturnType<P[K]["get"]>>
+  >;
 }>;
 
 type UseWidgetSnapshot<
   P extends Record<string, any>,
-  M extends WidgetMethods = WidgetMethods,
+  M extends object = WidgetMethods,
   C = unknown,
 > = {
-  widget: Widget<P, M, C> | undefined;
+  widget: Widget<P, StripRMetadata<M>, C> | undefined;
   status: WidgetStatus;
   fields: Widget<P, M, C>["properties"] | undefined;
   children: Widget<P, M, C>["children"] | undefined;
-  methods: M | undefined;
+  methods: StripRMetadata<M> | undefined;
   capabilities: WidgetCapabilities | undefined;
-  actionState: WidgetActionState | undefined;
   state: WidgetState<P> | undefined;
 };
 
 export type UseWidgetReturn<
   P extends Record<string, any>,
-  M extends WidgetMethods = WidgetMethods,
+  M extends object = WidgetMethods,
   C = unknown,
 > = UseWidgetSnapshot<P, M, C> & {
   set: <K extends Exclude<keyof P, "r_type" | "r_attributes">>(
@@ -154,33 +175,7 @@ export type UseWidgetReturn<
     value: ResultType<P[K]>,
     delay?: number
   ) => void;
-  dispatchAction: DispatchActionFn<M>;
-  undo: () => Promise<unknown>;
-  redo: () => Promise<unknown>;
 };
-
-function invokeWidgetMethod(
-  fn: unknown,
-  methodName: string,
-  ...args: unknown[]
-): Promise<unknown> | undefined {
-  if (fn == null) return undefined;
-  if (typeof fn === "function") {
-    return fn(...args);
-  }
-  if (
-    typeof fn === "object" &&
-    fn !== null &&
-    "call" in fn &&
-    typeof (fn as { call?: unknown }).call === "function"
-  ) {
-    return (fn as { call: (...a: unknown[]) => Promise<unknown> }).call(...args);
-  }
-  console.warn(
-    `[react-rserve] ${methodName} exists but is not callable (expected function or { call }).`
-  );
-  return undefined;
-}
 
 function normalizeCapabilities(raw: unknown): WidgetCapabilities | undefined {
   if (typeof raw !== "object" || raw === null) {
@@ -209,47 +204,34 @@ function normalizeCapabilities(raw: unknown): WidgetCapabilities | undefined {
 
 export class WidgetStore<
   T extends Record<string, any>,
-  M extends WidgetMethods = WidgetMethods,
+  M extends object = WidgetMethods,
   C = unknown,
 > {
-  private widget: Widget<T, M, C> | undefined;
-  private ctor: (
-    f: (
-      v: Partial<Expand<WidgetState<T>>>,
-      k: (err: string | null, res: null) => void
-    ) => void
-  ) => Promise<WidgetCtorResult<T, M, C>>;
+  private widget: Widget<T, StripRMetadata<M>, C> | undefined;
+  /** Runtime always passes a setState callback; ctor is typed loosely to accept generated ocap wrappers. */
+  private ctor: (f: unknown) => Promise<WidgetCtorResult<T, M, C>>;
   private status: WidgetStatus = "loading";
   private fields: Widget<T, M, C>["properties"] | undefined;
   private methods: M | undefined;
   private capabilities: WidgetCapabilities | undefined;
-  private actionState: WidgetActionState | undefined;
   private state: WidgetState<T> | undefined;
 
   private timeoutRefs: Partial<
-    Record<Exclude<keyof T, "r_type" | "r_attributes">, NodeJS.Timeout>
+    Record<Exclude<keyof T, "r_type" | "r_attributes">, ReturnType<typeof setTimeout>>
   >;
   private listeners = new Set<() => void>();
 
   private snapshot: {
-    widget: Widget<T, M, C> | undefined;
+    widget: Widget<T, StripRMetadata<M>, C> | undefined;
     status: WidgetStatus;
     fields: Widget<T, M, C>["properties"] | undefined;
     children: Widget<T, M, C>["children"] | undefined;
-    methods: M | undefined;
+    methods: StripRMetadata<M> | undefined;
     capabilities: WidgetCapabilities | undefined;
-    actionState: WidgetActionState | undefined;
     state: WidgetState<T> | undefined;
   };
 
-  constructor(
-    ctor: (
-      f: (
-        v: Partial<Expand<WidgetState<T>>>,
-        k: (err: string | null, res: null) => void
-      ) => void
-    ) => Promise<WidgetCtorResult<T, M, C>>
-  ) {
+  constructor(ctor: (f: unknown) => Promise<WidgetCtorResult<T, M, C>>) {
     this.ctor = ctor;
     this.timeoutRefs = {};
     this.snapshot = {
@@ -257,9 +239,8 @@ export class WidgetStore<
       status: this.status,
       fields: this.fields,
       children: undefined,
-      methods: this.methods,
+      methods: this.methods as StripRMetadata<M> | undefined,
       capabilities: this.capabilities,
-      actionState: this.actionState,
       state: this.state,
     };
     this.init();
@@ -274,19 +255,20 @@ export class WidgetStore<
   }
 
   private async init() {
-    const widget = await this.ctor((v, k) => {
-      this.updateState(v as any);
-      k(null, null);
-    });
+    const widget = await this.ctor(
+      (v: unknown, k: (err: string | null, res: null) => void) => {
+        this.updateState(v as Partial<WidgetState<T>>);
+        k(null, null);
+      }
+    );
     const capabilities = normalizeCapabilities(widget.capabilities);
     this.widget = {
       ...widget,
       capabilities,
-    };
+    } as Widget<T, StripRMetadata<M>, C>;
     this.fields = widget.properties;
     this.methods = widget.methods;
     this.capabilities = capabilities;
-    this.actionState = this.toActionState(capabilities);
     this.status = "ready";
 
     this.updateSnapshot();
@@ -306,9 +288,8 @@ export class WidgetStore<
       widget: this.widget,
       fields: this.widget?.properties,
       children: this.widget?.children,
-      methods: this.methods,
+      methods: this.methods as StripRMetadata<M> | undefined,
       capabilities: this.capabilities,
-      actionState: this.actionState,
       status: this.status,
       state: this.state,
     };
@@ -324,15 +305,6 @@ export class WidgetStore<
     value: ResultType<T[P]>,
     delay: number = 0
   ) => {
-    if (
-      this.capabilities?.actions.enabled &&
-      this.capabilities.actions.strict === "warn"
-    ) {
-      console.warn(
-        `[react-rserve] Direct set('${String(prop)}') used on action-enabled widget in warn mode. Prefer dispatchAction().`
-      );
-    }
-
     if (this.timeoutRefs[prop as string]) {
       clearTimeout(this.timeoutRefs[prop as string]);
     }
@@ -341,95 +313,6 @@ export class WidgetStore<
       if (this.fields) this.fields[prop].set(value);
     }, delay);
   };
-
-  dispatchAction = async (actionOrType: unknown, payloadArg?: unknown) => {
-    let action: DispatchActionObject | undefined;
-    let actionType = "";
-
-    if (
-      typeof actionOrType === "object" &&
-      actionOrType !== null &&
-      "type" in actionOrType &&
-      typeof (actionOrType as { type: unknown }).type === "string"
-    ) {
-      actionType = (actionOrType as { type: string }).type;
-      action = actionOrType as DispatchActionObject;
-    } else if (typeof actionOrType === "string") {
-      actionType = actionOrType;
-      action = { type: actionType, payload: payloadArg };
-    } else {
-      throw new Error(
-        "[react-rserve] dispatchAction expects either (actionObject) or (type, payload)."
-      );
-    }
-
-    const actionCaps = this.capabilities?.actions;
-    const declaredTypes = actionCaps?.types ?? [];
-    const strictness = actionCaps?.strict ?? "off";
-    const hasDeclaredTypes = declaredTypes.length > 0;
-    const isUnknownType = hasDeclaredTypes && !declaredTypes.includes(actionType);
-
-    if (isUnknownType) {
-      const msg = `[react-rserve] dispatchAction('${actionType}') is not in declared capabilities.actions.types: [${declaredTypes.join(
-        ", "
-      )}]`;
-      if (strictness === "strict") {
-        throw new Error(msg);
-      }
-      if (strictness === "warn") {
-        console.warn(msg);
-      }
-    }
-
-    const fn = this.methods?.dispatchAction;
-    if (fn == null) {
-      console.warn(
-        `[react-rserve] dispatchAction('${actionType}') requested but widget has no dispatchAction method.`
-      );
-      return undefined;
-    }
-    if (typeof actionOrType === "string") {
-      return invokeWidgetMethod(fn, "dispatchAction", actionType, payloadArg);
-    }
-    return invokeWidgetMethod(fn, "dispatchAction", action);
-  };
-
-  undo = async () => {
-    const fn = this.methods?.undo;
-    if (fn == null) {
-      console.warn(
-        "[react-rserve] undo() requested but widget has no undo method."
-      );
-      return undefined;
-    }
-    return invokeWidgetMethod(fn, "undo");
-  };
-
-  redo = async () => {
-    const fn = this.methods?.redo;
-    if (fn == null) {
-      console.warn(
-        "[react-rserve] redo() requested but widget has no redo method."
-      );
-      return undefined;
-    }
-    return invokeWidgetMethod(fn, "redo");
-  };
-
-  private toActionState(
-    capabilities: WidgetCapabilities | undefined
-  ): WidgetActionState | undefined {
-    const actions = capabilities?.actions;
-    if (!actions) {
-      return undefined;
-    }
-    return {
-      ...actions,
-      canUndo: false,
-      canRedo: false,
-      actionCount: 0,
-    };
-  }
 
   destroy() {
     if (this.timeoutRefs) {
@@ -440,52 +323,77 @@ export class WidgetStore<
   }
 }
 
+/**
+ * Plain JS ctor, or rserve-ts `Robj.ocap(...)` which is typed as `z.ZodEffects<…>`
+ * whose `z.infer` is the actual callable `(push?, …) => Promise<widget>`.
+ */
+type WidgetCtorFn = (...args: any[]) => Promise<any>;
+
+export type WidgetCtorLike = WidgetCtorFn | z.ZodTypeAny;
+
+type ResolveWidgetCtor<T extends WidgetCtorLike> = T extends WidgetCtorFn
+  ? T
+  : T extends z.ZodTypeAny
+    ? z.infer<T> extends WidgetCtorFn
+      ? z.infer<T>
+      : never
+    : never;
+
+type WidgetResultFromCtor<T extends WidgetCtorLike> = Awaited<
+  ReturnType<Extract<ResolveWidgetCtor<T>, WidgetCtorFn>>
+>;
+
+/**
+ * Widget shape is taken from `Awaited<ReturnType<resolvedCtor>>` so inference works for
+ * push-callback ctors, zero-arity factories, and Zod-wrapped ocap exports.
+ */
 export function useWidget<
-  P extends Record<string, any>,
-  M extends WidgetMethods = WidgetMethods,
-  C = unknown,
+  TCtor extends WidgetCtorLike &
+    ([ResolveWidgetCtor<TCtor>] extends [never] ? never : unknown),
 >(
-  ctor: (
-    f: (
-      v: Partial<Expand<WidgetState<P>>>,
-      k: (err: string | null, res: null) => void
-    ) => void
-  ) => Promise<{
-    properties: P;
-    children?: C;
-    methods?: M;
-    capabilities?: RawWidgetCapabilities | WidgetCapabilities | unknown;
-  }>
-): UseWidgetReturn<P, M, C> {
+  ctor: TCtor
+): UseWidgetReturn<
+  InferWidgetProperties<WidgetResultFromCtor<TCtor>>,
+  InferWidgetMethods<WidgetResultFromCtor<TCtor>>,
+  InferWidgetChildren<WidgetResultFromCtor<TCtor>>
+> {
+  type R = WidgetResultFromCtor<TCtor>;
+  type P = InferWidgetProperties<R>;
+  type M = InferWidgetMethods<R>;
+  type C = InferWidgetChildren<R>;
+
   const storeRef = useRef<WidgetStore<P, M, C>>(undefined);
 
   if (!storeRef.current) {
-    storeRef.current = new WidgetStore(ctor);
+    storeRef.current = new WidgetStore(
+      ctor as unknown as (f: unknown) => Promise<WidgetCtorResult<P, M, C>>
+    );
   }
 
-  const state: UseWidgetSnapshot<P, M, C> = useSyncExternalStore(
-    storeRef.current.subscribe,
-    storeRef.current.getSnapshot,
-    storeRef.current.getSnapshot
+  // `storeRef.current` is not control-flow narrowed for method references; bind a local
+  // so `useSyncExternalStore` infers `Snapshot` from `WidgetStore<P, M, C>["getSnapshot"]`.
+  const store = storeRef.current;
+
+  const snap = useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getSnapshot
   );
 
   useEffect(() => {
     return () => {
-      storeRef.current?.destroy();
+      store.destroy();
     };
-  }, []);
+  }, [store]);
 
   return {
-    ...state,
-    set: storeRef.current.set,
-    dispatchAction: storeRef.current.dispatchAction as DispatchActionFn<M>,
-    undo: storeRef.current.undo,
-    redo: storeRef.current.redo,
+    ...snap,
+    set: store.set,
   };
 }
 
-export type RWidget<T extends (fn: any) => any> = Expand<
-  Widget<Awaited<ReturnType<T>>["properties"]>
+export type RWidget<T extends WidgetCtorLike> = Expand<
+  Widget<InferWidgetProperties<WidgetResultFromCtor<T>>>
 >;
 
 type WidgetStatus = "ready" | "loading" | "setting";

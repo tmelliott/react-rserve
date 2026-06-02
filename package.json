@@ -23,6 +23,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:types": "tsc --noEmit -p tsconfig.lib.json",
+    "test:mre": "tsc --noEmit -p tsconfig.mre.json",
     "test:dts": "bun run build && node scripts/check-dts.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -33,7 +34,9 @@
     "release": "bun run lint && bun run build && changeset publish",
     "changeset": "changeset",
     "compile": "Rscript -e 'RserveTS::ts_compile(\"src/rserve/demo.R\"); RserveTS::ts_deploy(\"src/rserve/demo.R\")'",
-    "rserve": "Rscript src/rserve/demo.rserve.R"
+    "rserve": "Rscript src/rserve/demo.rserve.R",
+    "widgets:compile": "Rscript -e 'RserveTS::ts_compile(\"src/rserve/widgets.R\"); RserveTS::ts_deploy(\"src/rserve/widgets.R\")'",
+    "widgets:rserve": "Rscript src/rserve/widgets.rserve.R"
   },
   "peerDependencies": {
     "react": "^19.0.0",

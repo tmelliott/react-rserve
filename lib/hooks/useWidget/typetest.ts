@@ -1,4 +1,4 @@
-// Type-level test for useWidget action-enabled surface.
+// Type-level test for useWidget (state from get(), methods, children).
 // Run via: npx tsc --noEmit -p tsconfig.lib.json
 
 import { useWidget } from "./index";
@@ -15,92 +15,35 @@ type MockProp<T> = {
 type MockWidget = {
   properties: {
     value: MockProp<string>;
-  };
-  capabilities: {
-    actions: {
-      enabled: true;
-      types: string[];
-      strict: "warn";
-    };
+    count: MockProp<number>;
   };
   methods: {
-    dispatchAction: {
-      call: (
-        action:
-          | { type: "SetValue"; payload: { value: string } }
-          | { type: "ResetValue"; payload: { hard: boolean } }
-      ) => Promise<unknown>;
-    };
-    undo: { call: () => Promise<unknown> };
-    redo: { call: () => Promise<unknown> };
+    reset: () => Promise<void>;
   };
 };
 
 declare const widgetCtor: (
   f: (
-    v: { value?: string },
+    v: { value?: string; count?: number },
     k: (err: string | null, res: null) => void
   ) => void
 ) => Promise<MockWidget>;
 
-type MockWidgetTypePayload = {
-  properties: {
-    value: MockProp<string>;
-  };
-  methods: {
-    dispatchAction: (type: string, payload: { value: string }) => Promise<unknown>;
-  };
-};
+export function TypeCoreSurface() {
+  const { state, methods, children, set, fields } = useWidget(widgetCtor);
 
-declare const widgetCtorTypePayload: (
-  f: (
-    v: { value?: string },
-    k: (err: string | null, res: null) => void
-  ) => void
-) => Promise<MockWidgetTypePayload>;
-
-export function TypeSurfaceChecks() {
-  const {
-    actionState,
-    capabilities,
-    dispatchAction,
-    fields,
-    redo,
-    set,
-    undo,
-  } = useWidget(widgetCtor);
-
-  if (fields) {
-    void fields.value;
+  if (state) {
+    void (state.value satisfies string);
+    void (state.count satisfies number);
   }
 
-  if (capabilities?.actions) {
-    void (capabilities.actions.enabled satisfies boolean);
-    void (capabilities.actions.types satisfies string[]);
-    void (capabilities.actions.strict satisfies "off" | "warn" | "strict");
+  if (methods) {
+    void methods.reset;
   }
 
-  if (actionState) {
-    void (actionState.canUndo satisfies boolean);
-    void (actionState.canRedo satisfies boolean);
-    void (actionState.actionCount satisfies number);
-  }
-
-  void dispatchAction;
-  void undo;
-  void redo;
+  void children;
   void set;
-
-  void dispatchAction({ type: "SetValue", payload: { value: "x" } });
-  void dispatchAction({ type: "ResetValue", payload: { hard: true } });
-  void dispatchAction("SetValue", { value: "x" });
-}
-
-export function TypeSurfaceChecksTypePayload() {
-  const { dispatchAction } = useWidget(widgetCtorTypePayload);
-
-  void dispatchAction("SetValue", { value: "x" });
-  void dispatchAction({ type: "SetValue", payload: { value: "x" } });
+  void fields;
 }
 
 type GeneratedLikeWidgetCtor = (
@@ -126,20 +69,60 @@ type GeneratedLikeWidgetCtor = (
     };
   };
   methods: {
-    dispatchAction: (
-      action: { type: "SetName"; payload: { name: string } }
-    ) => Promise<unknown>;
+    ping: () => Promise<unknown>;
   };
 }>;
 
 declare const generatedLikeWidget: GeneratedLikeWidgetCtor;
 
 export function TypeGeneratedCtorCompatibility() {
-  const { capabilities, dispatchAction } = useWidget(generatedLikeWidget);
+  const { capabilities, methods } = useWidget(generatedLikeWidget);
 
   if (capabilities) {
     void (capabilities.actions.strict satisfies "off" | "warn" | "strict");
   }
 
-  void dispatchAction({ type: "SetName", payload: { name: "example" } });
+  if (methods) {
+    void methods.ping;
+  }
+}
+
+/** Mirrors rserve-ts `VectorObject`: named methods still carry `r_type: "vector"`. */
+type VectorObjectMethods = {
+  load_dataset: (url: string) => Promise<void>;
+} & {
+  readonly r_type: "vector";
+  r_attributes: Record<string, unknown>;
+};
+
+type CtorVectorObjectMethods = () => Promise<{
+  properties: {
+    value: MockProp<string>;
+  };
+  methods: VectorObjectMethods;
+}>;
+
+declare const ctorVectorObjectMethods: CtorVectorObjectMethods;
+
+export function TypeVectorObjectMethodsNotWidenedToRecord() {
+  const { methods } = useWidget(ctorVectorObjectMethods);
+
+  if (methods) {
+    void (methods.load_dataset satisfies (url: string) => Promise<void>);
+  }
+}
+
+/** Child-like widget type with no `methods` key (generated child connectors). */
+type WidgetShapeNoMethodsKey = {
+  properties: { value: MockProp<string> };
+  children?: Record<string, never>;
+};
+
+declare const ctorNoMethodsKey: () => Promise<WidgetShapeNoMethodsKey>;
+
+export function TypeOmittedMethodsFieldUsesWidgetMethods() {
+  const { methods } = useWidget(ctorNoMethodsKey);
+  if (methods) {
+    void (methods satisfies Record<string, unknown>);
+  }
 }

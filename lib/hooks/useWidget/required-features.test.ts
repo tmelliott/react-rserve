@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { WidgetStore } from "./index";
 
 type MockProp<T> = {
@@ -30,40 +30,6 @@ async function waitUntilReady(store: WidgetStore<any>) {
 }
 
 describe("Required behavior regressions", () => {
-  it("dispatchAction supports function-shaped methods", async () => {
-    const dispatchSpy = vi.fn().mockResolvedValue(null);
-    const ctor = async () => ({
-      properties: { value: createProp("x") },
-      methods: {
-        dispatchAction: dispatchSpy,
-      },
-    });
-
-    const store = new WidgetStore(ctor as any);
-    await waitUntilReady(store);
-    await store.dispatchAction("SetValue", { value: "z" });
-
-    expect(dispatchSpy).toHaveBeenCalledWith("SetValue", { value: "z" });
-  });
-
-  it("undo/redo support function-shaped methods", async () => {
-    const undoSpy = vi.fn().mockResolvedValue("undo-ok");
-    const redoSpy = vi.fn().mockResolvedValue("redo-ok");
-    const ctor = async () => ({
-      properties: { value: createProp("x") },
-      methods: {
-        undo: undoSpy,
-        redo: redoSpy,
-      },
-    });
-
-    const store = new WidgetStore(ctor as any);
-    await waitUntilReady(store);
-
-    await expect(store.undo()).resolves.toBe("undo-ok");
-    await expect(store.redo()).resolves.toBe("redo-ok");
-  });
-
   it("snapshot exposes children from connector", async () => {
     const ctor = async () => ({
       properties: { value: createProp("x") },

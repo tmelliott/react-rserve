@@ -16,6 +16,9 @@ export default defineConfig({
     react(),
     dts({
       tsconfigPath: resolve(__dirname, "tsconfig.lib.json"),
+      compilerOptions: {
+        declarationMap: true,
+      },
     }),
     nodePolyfills(),
   ],

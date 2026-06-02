@@ -1,5 +1,5 @@
 import { useRserve, useWidget, type AppType } from "../../lib/main";
-import appSchema from "../rserve/widgets.rserve";
+import appSchema, { TRngWidget, TCtrlWidget, THistogramWidget, TBarchartWidget } from "../rserve/widgets.rserve";
 
 import React from "react";
 import "./widget.css";
@@ -49,7 +49,7 @@ function Widgets() {
   );
 }
 
-export function RNGWidget({ rng }: { rng: Widgets["rngWidget"] }) {
+export function RNGWidget({ rng }: { rng: TRngWidget }) {
   const { state, set } = useWidget(rng);
   const [localValue, setLocalValue] = React.useState(state?.value ?? 0);
 
@@ -84,7 +84,7 @@ export function RNGWidget({ rng }: { rng: Widgets["rngWidget"] }) {
   );
 }
 
-function PlotWidget({ plot }: { plot: Widgets["ctrlWidget"] }) {
+function PlotWidget({ plot }: { plot: TCtrlWidget }) {
   const { state, children, methods } = useWidget(plot);
 
   if (!state) return <>Loading ...</>;
@@ -109,7 +109,7 @@ function PlotWidget({ plot }: { plot: Widgets["ctrlWidget"] }) {
   );
 }
 
-export function HistogramWidget({ hist }: { hist: Widgets["histogramWidget"] }) {
+export function HistogramWidget({ hist }: { hist: THistogramWidget }) {
   const { state, set } = useWidget(hist);
   const [localVar, setLocalVar] = React.useState(state?.var ?? "");
 
@@ -169,7 +169,7 @@ export function HistogramWidget({ hist }: { hist: Widgets["histogramWidget"] }) 
 export function BarChartWidget({
   barchart,
 }: {
-  barchart: Widgets["barchartWidget"];
+  barchart: TBarchartWidget;
 }) {
   const { state } = useWidget(barchart);
 
@@ -177,7 +177,7 @@ export function BarChartWidget({
   if (!state.data?.label) return <>No data</>;
 
   const data = dfToArray({
-    label: state.data.label,
+    label: Array.from(state.data.label),
     count: Array.from(state.data.count),
   });
   const maxCount = Math.max(...data.map((v) => v.count));
