@@ -61,7 +61,9 @@ class RServeStore<T extends z.ZodRawShape> {
         return c.ocap(this.schema);
       })
       .then((res) => {
-        this.app = res as any;
+        // rserve-ts `ocap` output type does not overlap Zod's `AppType<T>` under strict
+        // checking; runtime values match after `safeParse` in rserve-ts.
+        this.app = res as unknown as AppType<T>;
       })
       .catch((e) => {
         this.error = e;
@@ -90,14 +92,16 @@ class RServeStore<T extends z.ZodRawShape> {
     this.emitChange();
   }
 
-  get = () => {
-    return this.snapshot;
-  };
+  get = (): {
+    app: AppType<T> | undefined;
+    loading: boolean;
+    error: string | undefined;
+  } => this.snapshot;
 
   destroy = () => {};
 }
 
-export function useRserve<TFuns extends z.ZodRawShape>(
+export function useRserve<const TFuns extends z.ZodRawShape>(
   schema: TFuns,
   config?: Partial<RserveOptions>
 ) {
@@ -107,14 +111,15 @@ export function useRserve<TFuns extends z.ZodRawShape>(
     storeRef.current = new RServeStore(schema, config);
   }
 
-  const state = useSyncExternalStore(
-    storeRef.current.subscribe,
-    storeRef.current.get
-  );
+  const store = storeRef.current;
+
+  const state = useSyncExternalStore(store.subscribe, store.get);
 
   useEffect(() => {
-    return () => storeRef.current?.destroy();
-  });
+    return () => {
+      store.destroy();
+    };
+  }, [store]);
 
   return state;
 

@@ -30,21 +30,21 @@ type GeneratedLikeWidgetCtor = (
     };
   };
   methods: {
-    dispatchAction: (
-      action: { type: "SetName"; payload: { name: string } }
-    ) => Promise<unknown>;
+    describe: () => Promise<unknown>;
   };
 }>;
 
 declare const generatedWidget: GeneratedLikeWidgetCtor;
 
 export function GeneratedCtorRepro() {
-  const { capabilities, dispatchAction } = useWidget(generatedWidget);
+  const { capabilities, methods } = useWidget(generatedWidget);
 
   if (capabilities) {
     void (capabilities.actions.strict satisfies "off" | "warn" | "strict");
   }
-  void dispatchAction({ type: "SetName", payload: { name: "x" } });
+  if (methods) {
+    void methods.describe;
+  }
   return null;
 }
 
