@@ -1,7 +1,7 @@
 {
   "name": "@tmelliott/react-rserve",
   "private": false,
-  "version": "0.10.0",
+  "version": "0.10.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/tmelliott/react-rserve"
@@ -40,7 +40,9 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "rserve-ts": "^0.9.3",
+    "zod": "^3.25.64"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.17.4",
@@ -66,8 +68,8 @@
     "vitest": "^4.1.0"
   },
   "dependencies": {
-    "rserve-ts": "0.9.1",
-    "zod": "^3.25.67"
+    "rserve-ts": "^0.9.3",
+    "zod": "^3.25.64"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

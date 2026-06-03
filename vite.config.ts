@@ -29,7 +29,12 @@ export default defineConfig({
     },
     copyPublicDir: false,
     rollupOptions: {
-      external: ["react", "react/jsx-runtime"],
+      external: [
+        "react",
+        "react/jsx-runtime",
+        "rserve-ts",
+        "zod",
+      ],
       input: Object.fromEntries(
         glob
           .sync("lib/**/*.{ts,tsx}", {
