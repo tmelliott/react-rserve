@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.10.2
+
+### Patch Changes
+
+- 69b130d: Stop bundling `rserve-ts` and `zod` in the library build (Vite `external`). Bump minimum `rserve-ts` to `0.9.3` so list `r_attributes.names` accepts arrays from R.
+
 ## 0.10.0
 
 ### Minor Changes
