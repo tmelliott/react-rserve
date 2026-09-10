@@ -3,7 +3,10 @@ import RserveClient from "rserve-ts";
 import { z } from "zod";
 
 type RserveOptions = Parameters<(typeof RserveClient)["create"]>[0];
+type RserveConnection = Awaited<ReturnType<(typeof RserveClient)["create"]>>;
 type AppType<T extends z.ZodRawShape> = z.infer<z.ZodObject<T, "strip">>;
+
+export type RserveConnectionStatus = "connected" | "connecting" | "disconnected";
 
 export type RserveApp<T> = {
   app?: T;
@@ -15,58 +18,248 @@ const defaultConfig = {
   host: "http://localhost:6311",
 };
 
+const RETRY_BASE_MS = 1_000;
+const RETRY_MAX_MS = 10_000;
+const HEARTBEAT_INTERVAL_MS = 1_500;
+const HEARTBEAT_TIMEOUT_MS = 1_500;
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (Array.isArray(error)) return error.map(formatError).join(" ");
+  return String(error);
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("Connection timed out"));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
+type PingOcap = () => Promise<unknown>;
+
 class RServeStore<T extends z.ZodRawShape> {
-  // private con: Awaited<ReturnType<typeof RserveClient.create>> | undefined;
   private schema: T;
   private config: RserveOptions;
+  private client: RserveConnection | undefined;
+  private socket: WebSocket | undefined;
+  private pingOcap: PingOcap | undefined;
   private app: AppType<T> | undefined;
-  private loading: boolean = false;
+  private loading = false;
   private error: string | undefined;
+  private connectionStatus: RserveConnectionStatus = "connecting";
+  private everConnected = false;
+  private reconnectAttempt = 0;
+  private retryTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  private heartbeatIntervalId: ReturnType<typeof setInterval> | undefined;
+  private heartbeatInFlight = false;
+  private suppressCloseHandler = false;
+  private destroyed = false;
 
   private listeners = new Set<() => void>();
   private snapshot: {
     app: AppType<T> | undefined;
     loading: boolean;
     error: string | undefined;
+    connectionStatus: RserveConnectionStatus;
+    everConnected: boolean;
+    reconnectAttempt: number;
   };
 
   constructor(schema: T, config?: Partial<RserveOptions>) {
-    console.log("CONSTRUCT", { config });
     this.schema = schema;
     this.config = {
       ...defaultConfig,
       ...config,
+      on_socket: (socket) => {
+        config?.on_socket?.(socket);
+        this.socket = socket;
+      },
+      on_connect: () => {
+        config?.on_connect?.();
+      },
       on_close: (event) => {
-        if (config && config.on_close) config.on_close(event);
-        console.log("WebSocket disconnected ... reconnecting ...");
-        this.init();
+        config?.on_close?.(event);
+        if (this.suppressCloseHandler) return;
+        this.handleDisconnect();
       },
     };
-    this.loading = false;
-    this.snapshot = {
+    this.snapshot = this.buildSnapshot();
+    this.connect();
+  }
+
+  isDestroyed() {
+    return this.destroyed;
+  }
+
+  private buildSnapshot() {
+    return {
       app: this.app,
       loading: this.loading,
       error: this.error,
+      connectionStatus: this.connectionStatus,
+      everConnected: this.everConnected,
+      reconnectAttempt: this.reconnectAttempt,
     };
-    this.init();
   }
 
-  private init() {
+  private handleDisconnect() {
+    if (this.destroyed) return;
+    if (this.connectionStatus === "disconnected" && this.retryTimeoutId != null) {
+      return;
+    }
+
+    this.stopHeartbeat();
+    this.client = undefined;
+    this.socket = undefined;
+    this.pingOcap = undefined;
+    clearTimeout(this.retryTimeoutId);
+    this.connectionStatus = "disconnected";
+    this.updateSnapshot();
+    this.scheduleReconnect();
+  }
+
+  private scheduleReconnect() {
+    if (this.destroyed) return;
+    clearTimeout(this.retryTimeoutId);
+    const delay = Math.min(
+      RETRY_BASE_MS * 1.5 ** this.reconnectAttempt,
+      RETRY_MAX_MS
+    );
+    this.retryTimeoutId = setTimeout(() => {
+      this.reconnectAttempt += 1;
+      this.connect();
+    }, delay);
+  }
+
+  private teardownClient(options: { silent?: boolean } = {}) {
+    this.stopHeartbeat();
+    if (!this.client) return;
+
+    const client = this.client;
+    this.client = undefined;
+    this.socket = undefined;
+    this.pingOcap = undefined;
+    if (options.silent) {
+      this.suppressCloseHandler = true;
+    }
+    try {
+      client.close();
+    } catch {
+      // ignore close errors on dead sockets
+    }
+    if (options.silent) {
+      queueMicrotask(() => {
+        this.suppressCloseHandler = false;
+      });
+    }
+  }
+
+  private startHeartbeat() {
+    this.stopHeartbeat();
+    void this.pulse();
+    this.heartbeatIntervalId = setInterval(() => {
+      void this.pulse();
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private stopHeartbeat() {
+    clearInterval(this.heartbeatIntervalId);
+    this.heartbeatIntervalId = undefined;
+    this.heartbeatInFlight = false;
+  }
+
+  private isSocketOpen() {
+    return this.socket?.readyState === WebSocket.OPEN;
+  }
+
+  private heartbeatProbe(): (() => Promise<unknown>) | undefined {
+    if (this.pingOcap) {
+      return this.pingOcap;
+    }
+
+    const client = this.client;
+    if (!client) return undefined;
+
+    if (client.is_ocap_mode()) {
+      return undefined;
+    }
+
+    return () => client.eval("NULL");
+  }
+
+  private async pulse() {
+    if (this.destroyed || this.connectionStatus !== "connected") {
+      return;
+    }
+    if (this.heartbeatInFlight) {
+      return;
+    }
+
+    const client = this.client;
+    if (!client || !this.isSocketOpen() || client.is_closed()) {
+      this.handleDisconnect();
+      return;
+    }
+
+    const probe = this.heartbeatProbe();
+    if (!probe) {
+      return;
+    }
+
+    this.heartbeatInFlight = true;
+    try {
+      await withTimeout(probe(), HEARTBEAT_TIMEOUT_MS);
+    } catch (e) {
+      if (this.connectionStatus !== "connected") return;
+
+      this.error = formatError(e);
+      this.teardownClient({ silent: true });
+      this.handleDisconnect();
+    } finally {
+      this.heartbeatInFlight = false;
+    }
+  }
+
+  private connect() {
+    if (this.destroyed) return;
+    clearTimeout(this.retryTimeoutId);
+    this.teardownClient({ silent: true });
     this.loading = true;
+    this.connectionStatus = "connecting";
+    this.error = undefined;
     this.updateSnapshot();
 
     RserveClient.create(this.config)
       .then((c) => {
-        console.log(c);
+        this.client = c;
         return c.ocap(this.schema);
       })
       .then((res) => {
-        // rserve-ts `ocap` output type does not overlap Zod's `AppType<T>` under strict
-        // checking; runtime values match after `safeParse` in rserve-ts.
         this.app = res as unknown as AppType<T>;
+        const ping = (res as { ping?: PingOcap }).ping;
+        this.pingOcap = typeof ping === "function" ? ping : undefined;
+        this.connectionStatus = "connected";
+        this.everConnected = true;
+        this.reconnectAttempt = 0;
+        this.startHeartbeat();
       })
       .catch((e) => {
-        this.error = e;
+        this.teardownClient({ silent: true });
+        this.error = formatError(e);
+        this.connectionStatus = "disconnected";
+        this.scheduleReconnect();
       })
       .finally(() => {
         this.loading = false;
@@ -84,21 +277,18 @@ class RServeStore<T extends z.ZodRawShape> {
   }
 
   private updateSnapshot() {
-    this.snapshot = {
-      app: this.app,
-      loading: this.loading,
-      error: this.error,
-    };
+    this.snapshot = this.buildSnapshot();
     this.emitChange();
   }
 
-  get = (): {
-    app: AppType<T> | undefined;
-    loading: boolean;
-    error: string | undefined;
-  } => this.snapshot;
+  get = () => this.snapshot;
 
-  destroy = () => {};
+  destroy = () => {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    clearTimeout(this.retryTimeoutId);
+    this.teardownClient({ silent: true });
+  };
 }
 
 export function useRserve<const TFuns extends z.ZodRawShape>(
@@ -107,7 +297,7 @@ export function useRserve<const TFuns extends z.ZodRawShape>(
 ) {
   const storeRef = useRef<RServeStore<TFuns>>(undefined);
 
-  if (!storeRef.current) {
+  if (!storeRef.current || storeRef.current.isDestroyed()) {
     storeRef.current = new RServeStore(schema, config);
   }
 
@@ -122,40 +312,4 @@ export function useRserve<const TFuns extends z.ZodRawShape>(
   }, [store]);
 
   return state;
-
-  // const [app, setApp] = useState<AppType<TFuns>>();
-  // const [connecting, setConnecting] = useState(false);
-  // const [error, setError] = useState<string>();
-
-  // useEffect(() => {
-  //   if (app) return;
-  //   if (connecting) return;
-  //   setConnecting(true);
-  //   RserveClient.create({ ...defaultConfig, ...config })
-  //     .then((con) => {
-  //       console.log("Connected: ", con, schema);
-  //       return con.ocap(schema);
-  //     })
-  //     .then((res) => {
-  //       console.log("Loaded: ", res);
-  //       setApp(res as any as AppType<TFuns>);
-  //       setConnecting(false);
-  //     })
-  //     .catch((e) => {
-  //       setApp(undefined);
-  //       setError(e);
-  //       setConnecting(false);
-  //     });
-
-  //   return () => {
-  //     console.log("Unmounting ");
-  //     setApp(undefined);
-  //   };
-  // }, [app, connecting, config, schema]);
-
-  // return {
-  //   app,
-  //   loading: connecting,
-  //   error,
-  // };
 }

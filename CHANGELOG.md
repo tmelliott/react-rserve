@@ -1,5 +1,11 @@
 # @tmelliott/react-rserve
 
+## 0.10.1
+
+### Patch Changes
+
+- Restored `dispatchAction`, `undo`, `redo`, and `actionState` on `useWidget` (Strategy B pilot) while keeping 0.10 connector inference improvements. Apps may also compose `@rservets/react-actions` for the optional Strategy A surface.
+
 ## 0.10.0
 
 ### Minor Changes

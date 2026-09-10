@@ -25,6 +25,67 @@ export type WidgetCapabilities = {
   };
 };
 
+export type WidgetActionState = WidgetCapabilities["actions"] & {
+  canUndo: boolean;
+  canRedo: boolean;
+  actionCount: number;
+};
+
+type DispatchActionObject = {
+  type: string;
+  payload: unknown;
+};
+
+type DispatchActionFromMethod<D> = NonNullable<D> extends (
+  action: infer A,
+  ...args: any[]
+) => Promise<unknown>
+  ? A extends { type: string }
+    ? A
+    : DispatchActionObject
+  : NonNullable<D> extends {
+        call: (action: infer A, ...args: any[]) => Promise<unknown>;
+      }
+    ? A extends { type: string }
+      ? A
+      : DispatchActionObject
+    : DispatchActionObject;
+
+type DispatchActionTypePayloadArgs<D> = NonNullable<D> extends (
+  type: infer T,
+  payload: infer P,
+  ...args: any[]
+) => Promise<unknown>
+  ? T extends string
+    ? [type: T, payload: P]
+    : [type: string, payload: unknown]
+  : NonNullable<D> extends {
+        call: (
+          type: infer T,
+          payload: infer P,
+          ...args: any[]
+        ) => Promise<unknown>;
+      }
+    ? T extends string
+      ? [type: T, payload: P]
+      : [type: string, payload: unknown]
+    : [type: string, payload: unknown];
+
+type DispatchActionInput<M extends WidgetMethods> = NonNullable<M> extends {
+  dispatchAction?: infer D;
+}
+  ? DispatchActionFromMethod<D>
+  : DispatchActionObject;
+
+export type DispatchActionFn<M extends WidgetMethods> = {
+  (action: DispatchActionInput<M>): Promise<unknown>;
+  (
+    ...args: DispatchActionTypePayloadArgs<
+      NonNullable<M> extends { dispatchAction?: infer D } ? D : never
+    >
+  ): Promise<unknown>;
+};
+
 type RawWidgetCapabilities = {
   actions?: {
     enabled?: unknown;
@@ -162,6 +223,7 @@ type UseWidgetSnapshot<
   children: Widget<P, M, C>["children"] | undefined;
   methods: StripRMetadata<M> | undefined;
   capabilities: WidgetCapabilities | undefined;
+  actionState: WidgetActionState | undefined;
   state: WidgetState<P> | undefined;
 };
 
@@ -175,7 +237,33 @@ export type UseWidgetReturn<
     value: ResultType<P[K]>,
     delay?: number
   ) => void;
+  dispatchAction: DispatchActionFn<M & WidgetMethods>;
+  undo: () => Promise<unknown>;
+  redo: () => Promise<unknown>;
 };
+
+function invokeWidgetMethod(
+  fn: unknown,
+  methodName: string,
+  ...args: unknown[]
+): Promise<unknown> | undefined {
+  if (fn == null) return undefined;
+  if (typeof fn === "function") {
+    return fn(...args);
+  }
+  if (
+    typeof fn === "object" &&
+    fn !== null &&
+    "call" in fn &&
+    typeof (fn as { call?: unknown }).call === "function"
+  ) {
+    return (fn as { call: (...a: unknown[]) => Promise<unknown> }).call(...args);
+  }
+  console.warn(
+    `[react-rserve] ${methodName} exists but is not callable (expected function or { call }).`
+  );
+  return undefined;
+}
 
 function normalizeCapabilities(raw: unknown): WidgetCapabilities | undefined {
   if (typeof raw !== "object" || raw === null) {
@@ -214,6 +302,7 @@ export class WidgetStore<
   private fields: Widget<T, M, C>["properties"] | undefined;
   private methods: M | undefined;
   private capabilities: WidgetCapabilities | undefined;
+  private actionState: WidgetActionState | undefined;
   private state: WidgetState<T> | undefined;
 
   private timeoutRefs: Partial<
@@ -228,6 +317,7 @@ export class WidgetStore<
     children: Widget<T, M, C>["children"] | undefined;
     methods: StripRMetadata<M> | undefined;
     capabilities: WidgetCapabilities | undefined;
+    actionState: WidgetActionState | undefined;
     state: WidgetState<T> | undefined;
   };
 
@@ -241,6 +331,7 @@ export class WidgetStore<
       children: undefined,
       methods: this.methods as StripRMetadata<M> | undefined,
       capabilities: this.capabilities,
+      actionState: this.actionState,
       state: this.state,
     };
     this.init();
@@ -269,6 +360,7 @@ export class WidgetStore<
     this.fields = widget.properties;
     this.methods = widget.methods;
     this.capabilities = capabilities;
+    this.actionState = this.toActionState(capabilities);
     this.status = "ready";
 
     this.updateSnapshot();
@@ -290,6 +382,7 @@ export class WidgetStore<
       children: this.widget?.children,
       methods: this.methods as StripRMetadata<M> | undefined,
       capabilities: this.capabilities,
+      actionState: this.actionState,
       status: this.status,
       state: this.state,
     };
@@ -305,6 +398,15 @@ export class WidgetStore<
     value: ResultType<T[P]>,
     delay: number = 0
   ) => {
+    if (
+      this.capabilities?.actions.enabled &&
+      this.capabilities.actions.strict === "warn"
+    ) {
+      console.warn(
+        `[react-rserve] Direct set('${String(prop)}') used on action-enabled widget in warn mode. Prefer dispatchAction().`
+      );
+    }
+
     if (this.timeoutRefs[prop as string]) {
       clearTimeout(this.timeoutRefs[prop as string]);
     }
@@ -313,6 +415,95 @@ export class WidgetStore<
       if (this.fields) this.fields[prop].set(value);
     }, delay);
   };
+
+  dispatchAction = async (actionOrType: unknown, payloadArg?: unknown) => {
+    let action: DispatchActionObject | undefined;
+    let actionType = "";
+
+    if (
+      typeof actionOrType === "object" &&
+      actionOrType !== null &&
+      "type" in actionOrType &&
+      typeof (actionOrType as { type: unknown }).type === "string"
+    ) {
+      actionType = (actionOrType as { type: string }).type;
+      action = actionOrType as DispatchActionObject;
+    } else if (typeof actionOrType === "string") {
+      actionType = actionOrType;
+      action = { type: actionType, payload: payloadArg };
+    } else {
+      throw new Error(
+        "[react-rserve] dispatchAction expects either (actionObject) or (type, payload)."
+      );
+    }
+
+    const actionCaps = this.capabilities?.actions;
+    const declaredTypes = actionCaps?.types ?? [];
+    const strictness = actionCaps?.strict ?? "off";
+    const hasDeclaredTypes = declaredTypes.length > 0;
+    const isUnknownType = hasDeclaredTypes && !declaredTypes.includes(actionType);
+
+    if (isUnknownType) {
+      const msg = `[react-rserve] dispatchAction('${actionType}') is not in declared capabilities.actions.types: [${declaredTypes.join(
+        ", "
+      )}]`;
+      if (strictness === "strict") {
+        throw new Error(msg);
+      }
+      if (strictness === "warn") {
+        console.warn(msg);
+      }
+    }
+
+    const fn = (this.methods as WidgetMethods)?.dispatchAction;
+    if (fn == null) {
+      console.warn(
+        `[react-rserve] dispatchAction('${actionType}') requested but widget has no dispatchAction method.`
+      );
+      return undefined;
+    }
+    if (typeof actionOrType === "string") {
+      return invokeWidgetMethod(fn, "dispatchAction", actionType, payloadArg);
+    }
+    return invokeWidgetMethod(fn, "dispatchAction", action);
+  };
+
+  undo = async () => {
+    const fn = (this.methods as WidgetMethods)?.undo;
+    if (fn == null) {
+      console.warn(
+        "[react-rserve] undo() requested but widget has no undo method."
+      );
+      return undefined;
+    }
+    return invokeWidgetMethod(fn, "undo");
+  };
+
+  redo = async () => {
+    const fn = (this.methods as WidgetMethods)?.redo;
+    if (fn == null) {
+      console.warn(
+        "[react-rserve] redo() requested but widget has no redo method."
+      );
+      return undefined;
+    }
+    return invokeWidgetMethod(fn, "redo");
+  };
+
+  private toActionState(
+    capabilities: WidgetCapabilities | undefined
+  ): WidgetActionState | undefined {
+    const actions = capabilities?.actions;
+    if (!actions) {
+      return undefined;
+    }
+    return {
+      ...actions,
+      canUndo: false,
+      canRedo: false,
+      actionCount: 0,
+    };
+  }
 
   destroy() {
     if (this.timeoutRefs) {
@@ -389,6 +580,9 @@ export function useWidget<
   return {
     ...snap,
     set: store.set,
+    dispatchAction: store.dispatchAction as DispatchActionFn<M & WidgetMethods>,
+    undo: store.undo,
+    redo: store.redo,
   };
 }
 

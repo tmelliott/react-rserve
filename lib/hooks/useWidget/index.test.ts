@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { WidgetStore } from "./index";
 
 type MockProp<T> = {
@@ -48,7 +48,8 @@ describe("WidgetStore", () => {
     expect(snapshot.capabilities?.actions.strict).toBe("warn");
   });
 
-  it("set forwards to property without action-mode warnings", async () => {
+  it("set forwards to property and warns in action warn mode", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const ctor = async () => ({
       properties: { value: createProp("x") },
       capabilities: {
@@ -59,8 +60,26 @@ describe("WidgetStore", () => {
     const store = new WidgetStore(ctor as any);
     await waitUntilReady(store);
     store.set("value", "y");
+    expect(warn).toHaveBeenCalled();
     await new Promise((r) => setTimeout(r, 20));
     expect(await store.getSnapshot().fields?.value.get()).toBe("y");
+    warn.mockRestore();
+  });
+
+  it("dispatchAction forwards to methods.dispatchAction", async () => {
+    const dispatch = vi.fn(async () => undefined);
+    const ctor = async () => ({
+      properties: { value: createProp("x") },
+      methods: { dispatchAction: dispatch },
+      capabilities: {
+        actions: { enabled: true, types: ["SetValue"], strict: "off" as const },
+      },
+    });
+
+    const store = new WidgetStore(ctor as any);
+    await waitUntilReady(store);
+    await store.dispatchAction({ type: "SetValue", payload: { value: "y" } });
+    expect(dispatch).toHaveBeenCalledWith({ type: "SetValue", payload: { value: "y" } });
   });
 
   it("normalizes generated-like capabilities shape", async () => {
